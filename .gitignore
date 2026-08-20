@@ -11,3 +11,18 @@ coverage/
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+
+# next.js (from create-next-app scaffold)
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+/build
+*.pem
+.pnpm-debug.log*
+.vercel
+*.tsbuildinfo
+next-env.d.ts
