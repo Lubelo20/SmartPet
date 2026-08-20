@@ -59,4 +59,11 @@ describe("mock adapter", () => {
     const stamps = rows.map((r) => r.timestamp);
     expect([...stamps].sort((a, b) => b - a)).toEqual(stamps);
   });
+
+  it("generates identical seeded history for every adapter instance", async () => {
+    const a = await createMockAdapter().feedings.list();
+    const b = await createMockAdapter().feedings.list();
+    expect(b.map((r) => [r.timestamp, r.petId, r.actualG, r.confidence]))
+      .toEqual(a.map((r) => [r.timestamp, r.petId, r.actualG, r.confidence]));
+  });
 });

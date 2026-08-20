@@ -1,5 +1,5 @@
 import type { Alert, FeedingRecord, Pet, Schedule } from "@/lib/types";
-import { rint, rnd, uid } from "@/lib/utils";
+import { resetSeed, rint, rnd, uid } from "@/lib/utils";
 
 export function buildSeedPets(): Pet[] {
   return [
@@ -24,6 +24,7 @@ export function buildSeedSchedules(): Schedule[] {
 }
 
 export function buildSeedFeedings(): FeedingRecord[] {
+  resetSeed();
   const rows: FeedingRecord[] = [];
   const now = new Date();
   for (let back = 13; back >= 0; back--) {
