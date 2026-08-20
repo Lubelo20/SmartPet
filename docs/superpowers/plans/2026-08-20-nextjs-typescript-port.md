@@ -71,9 +71,10 @@ npx create-next-app@latest /tmp/feeder-scaffold \
 - [ ] **Step 2: Move the scaffold into the repo**
 
 ```bash
+REPO="$PWD"          # run this from the repo root; it may be a git worktree
 cd /tmp/feeder-scaffold && rm -rf .git README.md public/*.svg app/page.tsx
-cp -R . /Users/ndumisomngomezulu/Downloads/GROUP4/
-npm install
+cp -R . "$REPO"/
+cd "$REPO" && npm install
 ```
 
 `app/page.tsx` is deleted because the real root route is `app/(dashboard)/page.tsx` (Task 13).
@@ -1049,7 +1050,7 @@ git commit -m "feat: port command bus as an injectable factory"
 ### Task 8: Analytics derivation and hooks
 
 **Files:**
-- Create: `lib/analytics.ts`, `hooks/useAnalytics.ts`, `hooks/useTelemetry.ts`, `hooks/useToast.tsx`
+- Create: `lib/analytics.ts`, `hooks/useAnalytics.ts`, `hooks/useTelemetry.ts`, `hooks/useToast.tsx`, `components/ui/ToastNotification.tsx`, `components/ui/tone.ts`
 - Test: `lib/__tests__/analytics.test.ts`
 
 **Interfaces:**
@@ -1165,6 +1166,8 @@ export function useTelemetry(store: TelemetryStore) {
 }
 ```
 
+`ToastProvider` renders `<ToastNotification>`, so this task also creates `components/ui/tone.ts` (`TONE`, lines 545-551, typed `Record<Tone, { ring: string; bg: string; text: string; dot: string; Icon: LucideIcon }>`) and `components/ui/ToastNotification.tsx` (lines 655-668, props `{ tone?: Tone; title: string; message?: string; onClose: () => void }`). Task 9 creates the remaining primitives and must not recreate these two.
+
 `hooks/useToast.tsx` ports `ToastProvider` and `useToast` from lines 520-540. Two typed changes: the context is `createContext<((t: ToastInput) => void) | null>(null)`, and `useToast()` throws if used outside the provider so callers get a non-null function instead of an optional one.
 
 - [ ] **Step 5: Run the tests**
@@ -1184,28 +1187,16 @@ git commit -m "feat: extract testable analytics derivation and port hooks"
 ### Task 9: UI primitives
 
 **Files:**
-- Create: `components/ui/{Card,SectionHead,Label,Badge,Button,Field,Input,Select,ProgressBar,Modal,ToastNotification,LoadingState,EmptyState,ErrorState}.tsx`, `components/ui/tone.ts`
+- Create: `components/ui/{Card,SectionHead,Label,Badge,Button,Field,Input,Select,ProgressBar,Modal,LoadingState,EmptyState,ErrorState}.tsx`
 - Test: none — verified by `npm run typecheck`, per the spec's decision that ported UI is verified by comparison rather than assertion.
 
 **Interfaces:**
 - Consumes: `Tone` from `@/lib/types`; `clamp` from `@/lib/utils`; `lucide-react` icons.
-- Produces: the 14 components below, plus `TONE` from `components/ui/tone.ts`.
+- Produces: the 13 components below. `TONE` and `ToastNotification` already exist from Task 8 — import `TONE` from `@/components/ui/tone`, do not redeclare it.
 
-Source: `smart-pet-feeder-dashboard.jsx:542-707`. One component per file. `TONE` (lines 545-551) goes in its own module because both `Badge` and `ToastNotification` import it.
+Source: `smart-pet-feeder-dashboard.jsx:542-707`. One component per file.
 
-- [ ] **Step 1: Create `components/ui/tone.ts`**
-
-```ts
-import { AlertTriangle, CheckCircle2, Info, XCircle } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import type { Tone } from "@/lib/types";
-
-export const TONE: Record<Tone, {
-  ring: string; bg: string; text: string; dot: string; Icon: LucideIcon;
-}> = { /* the five entries from lines 545-551, copied verbatim */ };
-```
-
-- [ ] **Step 2: Create the six trivial primitives**
+- [ ] **Step 1: Create the six trivial primitives**
 
 Each is a direct copy of its original body with a typed props declaration:
 
@@ -1224,7 +1215,7 @@ type FieldProps = { label: string; hint?: string; children: React.ReactNode };
 type ProgressBarProps = { value: number; tone?: "emerald" | "amber" | "rose" | "slate" | "sky"; height?: number };
 ```
 
-- [ ] **Step 3: Create `Button.tsx`, `Input.tsx` and `Select.tsx`**
+- [ ] **Step 2: Create `Button.tsx`, `Input.tsx` and `Select.tsx`**
 
 `Button` (lines 587-603) spreads onto a native button and takes a lucide icon component:
 
@@ -1240,7 +1231,7 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 
 `Input` and `Select` (lines 617-618) take `React.InputHTMLAttributes<HTMLInputElement>` and `React.SelectHTMLAttributes<HTMLSelectElement>`. `inputCls` (line 616) lives in `Input.tsx` and is exported so `Select.tsx` reuses it — it must not be duplicated.
 
-- [ ] **Step 4: Create `Modal.tsx`**
+- [ ] **Step 3: Create `Modal.tsx`**
 
 Lines 629-653. It has an escape-key `useEffect`, so it needs `"use client"`. Type the handler as `(e: KeyboardEvent) => void`.
 
@@ -1251,11 +1242,9 @@ type ModalProps = {
 };
 ```
 
-- [ ] **Step 5: Create the four state components**
+- [ ] **Step 4: Create the three remaining state components**
 
 ```ts
-// ToastNotification.tsx  lines 655-668
-type ToastNotificationProps = { tone?: Tone; title: string; message?: string; onClose: () => void };
 // LoadingState.tsx       lines 670-683
 type LoadingStateProps = { label?: string; rows?: number };
 // EmptyState.tsx         lines 685-694
@@ -1264,19 +1253,19 @@ type EmptyStateProps = { icon?: LucideIcon; title: string; message?: string; act
 type ErrorStateProps = { title?: string; message?: string; onRetry?: () => void };
 ```
 
-- [ ] **Step 6: Convert the Tailwind v4 casualties**
+- [ ] **Step 5: Convert the Tailwind v4 casualties**
 
 Search the files you just created for `bg-opacity-` and rewrite each as slash syntax. In this task that is `Modal`'s backdrop (`bg-slate-900 bg-opacity-60` → `bg-slate-900/60`).
 
 Run: `grep -rn "bg-opacity-" components/`
 Expected: no matches.
 
-- [ ] **Step 7: Verify**
+- [ ] **Step 6: Verify**
 
 Run: `npm run typecheck && npm run lint`
 Expected: no errors.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add components/ui
@@ -1547,7 +1536,7 @@ Comparison needs both versions on screen. One-time setup, thrown away in Task 17
 npm create vite@latest /tmp/feeder-reference -- --template react
 cd /tmp/feeder-reference && npm install && npm install lucide-react recharts@^3
 npm install -D tailwindcss @tailwindcss/vite
-cp /Users/ndumisomngomezulu/Downloads/GROUP4/smart-pet-feeder-dashboard.jsx src/App.jsx
+cp "$REPO"/smart-pet-feeder-dashboard.jsx src/App.jsx   # $REPO = your repo root
 ```
 
 Wire `@tailwindcss/vite` into `vite.config.js` and `@import "tailwindcss";` into `src/index.css`, then `npm run dev`. Leave it running on its own port for Tasks 13-16.
