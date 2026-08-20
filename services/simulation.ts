@@ -55,7 +55,7 @@ export class SimulationEngine {
     this.emit({ kind: "demo", on });
   }
 
-  startCycle(petId: string, targetG: number, trigger = "Manual"): boolean {
+  startCycle(petId: string, targetG: number, trigger: "Manual" | "Scheduled" = "Manual"): boolean {
     const s = this.store.get();
     if (s.cycle.active || !s.device.online) return false;
     this.phaseEnd = Date.now() + 1600;
@@ -180,7 +180,7 @@ export class SimulationEngine {
           actualG: actual,
           status: short ? "Under-dispensed" : "Completed",
           confidence: s.detection.confidence || 95,
-          trigger: (s.cycle.trigger as "Manual" | "Scheduled") || "Scheduled",
+          trigger: s.cycle.trigger === "Manual" ? "Manual" : "Scheduled",
           durationS: Number(((now - (s.cycle.startedAt as number)) / 1000).toFixed(1)),
         };
         patch.cycle = { ...s.cycle, active: false, step: -1, message: short ? "Cycle ended short of target" : "Feeding complete" };

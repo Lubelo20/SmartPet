@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SimulationEngine } from "@/services/simulation";
 import { TelemetryStore, initialTelemetry } from "@/services/telemetry";
-import type { EngineEvent } from "@/lib/types";
+import type { EngineEvent, Pet } from "@/lib/types";
 
 function harness() {
   const store = new TelemetryStore(initialTelemetry(Date.now()));
@@ -11,6 +11,22 @@ function harness() {
   engine.on((e) => events.push(e));
   engine.start();
   return { store, engine, events };
+}
+
+function demoPet(overrides: Partial<Pet> = {}): Pet {
+  return {
+    id: "PET009",
+    name: "Demo Dog",
+    species: "Dog",
+    breed: "Mixed",
+    weightKg: 10,
+    portionG: 20,
+    mealsPerDay: 2,
+    status: "Active",
+    colour: "amber",
+    enrolledAt: "2026-01-01",
+    ...overrides,
+  };
 }
 
 describe("SimulationEngine", () => {
@@ -104,6 +120,92 @@ describe("SimulationEngine", () => {
     vi.advanceTimersByTime(400 * 60);
     expect(store.get().history.weight).toHaveLength(40);
     expect(store.get().history.distance).toHaveLength(40);
+    engine.stop();
+  });
+
+  it("brackets the 1600/1800/1200 ms phase boundaries exactly", () => {
+    const { store, engine } = harness();
+    engine.startCycle("PET001", 150, "Manual");
+
+    // step 0 -> 1 boundary at 1600 ms
+    vi.advanceTimersByTime(1_600);
+    expect(store.get().cycle.step).toBe(0);
+    vi.advanceTimersByTime(400);
+    expect(store.get().cycle.step).toBe(1);
+
+    // step 1 -> 2 boundary at +1800 ms
+    vi.advanceTimersByTime(1_600);
+    expect(store.get().cycle.step).toBe(1);
+    vi.advanceTimersByTime(400);
+    expect(store.get().cycle.step).toBe(2);
+
+    // step 2 -> 3 boundary at +1200 ms (this phaseEnd lands exactly on a tick,
+    // so — like the 1600 ms boundary — the transition is only observed on the
+    // next 400 ms tick after it, per the engine's strict `now > phaseEnd` check)
+    vi.advanceTimersByTime(800);
+    expect(store.get().cycle.step).toBe(2);
+    vi.advanceTimersByTime(800);
+    expect(store.get().cycle.step).toBe(3);
+    expect(store.get().servo).toBe("DISPENSING");
+
+    engine.stop();
+  });
+
+  it("pins the tick rate at 400 ms via history growth", () => {
+    const { store, engine } = harness();
+    vi.advanceTimersByTime(2_000);
+    expect(store.get().history.weight).toHaveLength(5);
+    expect(store.get().history.distance).toHaveLength(5);
+    engine.stop();
+  });
+
+  it("looks up the pet name via setPets for the identification message", () => {
+    const { store, engine } = harness();
+    engine.setPets([demoPet({ id: "PET001", name: "Bella" })]);
+    engine.startCycle("PET001", 150, "Manual");
+    vi.advanceTimersByTime(2_000);
+    expect(store.get().cycle.step).toBe(1);
+    expect(store.get().cycle.message).toContain("Bella");
+    engine.stop();
+  });
+
+  it("demo autoplay with no pets set does not throw or start a cycle", () => {
+    const { store, engine } = harness();
+    const heartbeatBefore = store.get().device.lastHeartbeat;
+    engine.setDemo(true);
+    expect(() => vi.advanceTimersByTime(7_000)).not.toThrow();
+    expect(store.get().cycle.active).toBe(false);
+    expect(store.get().device.lastHeartbeat).toBeGreaterThan(heartbeatBefore);
+    expect(store.get().history.weight.length).toBeGreaterThan(0);
+    engine.stop();
+  });
+
+  it("demo autoplay starts a cycle once pets are set", () => {
+    const { store, engine } = harness();
+    engine.setPets([demoPet()]);
+    engine.setDemo(true);
+    vi.advanceTimersByTime(6_800);
+    const s = store.get();
+    expect(s.cycle.active).toBe(true);
+    expect(s.cycle.petId).toBe("PET009");
+    expect(s.cycle.trigger).toBe("Scheduled");
+    engine.stop();
+  });
+
+  it("parks autoNext after a demo cycle completes so demo-off stops the loop", () => {
+    const { store, engine, events } = harness();
+    engine.setPets([demoPet()]);
+    engine.setDemo(true);
+    for (let i = 0; i < 100 && !events.some((e) => e.kind === "cycle:complete"); i++) {
+      vi.advanceTimersByTime(400);
+    }
+    expect(events.filter((e) => e.kind === "cycle:complete")).toHaveLength(1);
+    expect(store.get().cycle.active).toBe(false);
+
+    engine.setDemo(false);
+    vi.advanceTimersByTime(20_000);
+    expect(events.filter((e) => e.kind === "cycle:complete")).toHaveLength(1);
+    expect(store.get().cycle.active).toBe(false);
     engine.stop();
   });
 });
