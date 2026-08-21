@@ -1255,7 +1255,7 @@ type ErrorStateProps = { title?: string; message?: string; onRetry?: () => void 
 
 - [ ] **Step 5: Convert the Tailwind v4 casualties**
 
-Search the files you just created for `bg-opacity-` and rewrite each as slash syntax. In this task that is `Modal`'s backdrop (`bg-slate-900 bg-opacity-60` → `bg-slate-900/60`).
+Search the files you just created for `bg-opacity-` and rewrite each as slash syntax. In this task there are none: `Modal`'s backdrop at `smart-pet-feeder-dashboard.jsx:639` is `bg-slate-900 opacity-40` — whole-element opacity, which Tailwind v4 kept — so transcribe it verbatim. Only the `bg-opacity-*` compositing modifier was removed.
 
 Run: `grep -rn "bg-opacity-" components/`
 Expected: no matches.
@@ -1396,12 +1396,19 @@ type PetFormModalProps = {
 };
 ```
 
-- [ ] **Step 6: Verify**
+- [ ] **Step 6: Convert the Tailwind v4 casualties**
+
+`CameraPreview` holds six of the seven `bg-opacity-*` utilities in the original — `smart-pet-feeder-dashboard.jsx:829, 833, 835, 840, 843` are `bg-slate-900 bg-opacity-70` → `bg-slate-900/70`, and `:848` is `bg-slate-900 bg-opacity-60` → `bg-slate-900/60`. Tailwind v4 removed that modifier, so these render wrong otherwise. Leave plain `opacity-*` utilities alone — those still exist in v4.
+
+Run: `grep -rn "bg-opacity-" components/`
+Expected: no matches.
+
+- [ ] **Step 7: Verify**
 
 Run: `npm run typecheck && npm run lint`
 Expected: no errors.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add components/feeder
@@ -1500,7 +1507,7 @@ Mounts `ServicesProvider` → `ToastProvider` → `FeederDataProvider`, renders 
 - [ ] **Step 8: Convert the remaining opacity utilities**
 
 Run: `grep -rn "bg-opacity-" app/ components/`
-Expected: no matches. The header (`bg-white bg-opacity-90` → `bg-white/90`) and the mobile drawer scrim (`bg-slate-900 bg-opacity-40` → `bg-slate-900/40`) are in this task.
+Expected: no matches. This task has exactly one: the header at `smart-pet-feeder-dashboard.jsx:2267`, `bg-white bg-opacity-90` → `bg-white/90`. The mobile drawer scrim at `:2257` is `bg-slate-900 opacity-40` — plain opacity, still valid in v4, so transcribe it verbatim.
 
 - [ ] **Step 9: Verify**
 
