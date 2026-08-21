@@ -14,7 +14,7 @@ export function DeviceStatusPill({ online, lastHeartbeat }: DeviceStatusPillProp
       <span className={`text-xs font-semibold ${online ? "text-emerald-700" : "text-rose-700"}`}>
         {online ? "Device online" : "Device offline"}
       </span>
-      <span className="hidden sm:inline text-xs text-slate-400 border-l border-slate-200 pl-2">{timeAgo(lastHeartbeat)}</span>
+      <span className="hidden sm:inline text-xs text-slate-400 border-l border-slate-200 pl-2" suppressHydrationWarning>{timeAgo(lastHeartbeat)}</span>
     </div>
   );
 }

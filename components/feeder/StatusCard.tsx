@@ -28,7 +28,7 @@ export function StatusCard({ label, value, unit, caption, icon: Icon, tone = "ne
         <span className="text-3xl font-bold tracking-tight text-slate-900 font-mono">{value}</span>
         {unit && <span className="text-sm font-medium text-slate-400">{unit}</span>}
       </div>
-      {caption && <p className="text-sm text-slate-500 mt-1">{caption}</p>}
+      {caption && <p className="text-sm text-slate-500 mt-1" suppressHydrationWarning>{caption}</p>}
       {children && <div className="mt-4">{children}</div>}
     </Card>
   );
