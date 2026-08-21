@@ -81,7 +81,7 @@ export function CameraPreview({ detection, pet, online, compact = false }: Camer
         </span>
         <span className="rounded-md bg-slate-900/70 px-2 py-1 text-xs font-mono text-slate-300">CAM-01 · 640×480</span>
       </div>
-      <div className="absolute top-3 right-3 rounded-md bg-slate-900/70 px-2 py-1 text-xs font-mono text-slate-300">
+      <div className="absolute top-3 right-3 rounded-md bg-slate-900/70 px-2 py-1 text-xs font-mono text-slate-300" suppressHydrationWarning>
         {new Date().toLocaleTimeString()}
       </div>
       {!compact && (
