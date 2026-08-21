@@ -24,17 +24,21 @@ describe("commandBus", () => {
   it("rejects when the device is offline", async () => {
     const { engine, bus } = harness();
     engine.scenario("offline");
+    const spy = vi.spyOn(engine, "stopCycle");
     const sent = bus.send("feeding.stop");
+    const assertion = expect(sent).rejects.toThrow("Unable to reach the feeder");
     await vi.advanceTimersByTimeAsync(400);
-    await expect(sent).rejects.toThrow("Unable to reach the feeder");
+    await assertion;
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it("rejects a second concurrent feeding", async () => {
     const { engine, bus } = harness();
     engine.startCycle("PET001", 150);
     const sent = bus.send("feeding.start", { petId: "PET002", portionG: 120 });
+    const assertion = expect(sent).rejects.toThrow("already running");
     await vi.advanceTimersByTimeAsync(400);
-    await expect(sent).rejects.toThrow("already running");
+    await assertion;
   });
 
   it("accepts configuration commands without touching the engine", async () => {
