@@ -139,12 +139,15 @@ describe("SimulationEngine", () => {
     vi.advanceTimersByTime(400);
     expect(store.get().cycle.step).toBe(2);
 
-    // step 2 -> 3 boundary at +1200 ms (this phaseEnd lands exactly on a tick,
-    // so — like the 1600 ms boundary — the transition is only observed on the
-    // next 400 ms tick after it, per the engine's strict `now > phaseEnd` check)
-    vi.advanceTimersByTime(800);
+    // step 2 -> 3 boundary at +1200 ms. Bracket tight to the boundary itself
+    // (t2 + 1200 and t2 + 1600, one tick either side of the nominal 1200 ms):
+    // a too-short duration (e.g. 1000 ms) would already have flipped by
+    // t2 + 1200, failing the first assertion; the nominal 1200 ms cannot flip
+    // until the first tick after t2 + 1200 — i.e. by t2 + 1600 — per the
+    // engine's strict `now > phaseEnd` check.
+    vi.advanceTimersByTime(1_200);
     expect(store.get().cycle.step).toBe(2);
-    vi.advanceTimersByTime(800);
+    vi.advanceTimersByTime(400);
     expect(store.get().cycle.step).toBe(3);
     expect(store.get().servo).toBe("DISPENSING");
 
@@ -192,7 +195,7 @@ describe("SimulationEngine", () => {
     engine.stop();
   });
 
-  it("parks autoNext after a demo cycle completes so demo-off stops the loop", () => {
+  it("parks autoNext for 16 s after a demo cycle completes, then releases it", () => {
     const { store, engine, events } = harness();
     engine.setPets([demoPet()]);
     engine.setDemo(true);
@@ -201,11 +204,17 @@ describe("SimulationEngine", () => {
     }
     expect(events.filter((e) => e.kind === "cycle:complete")).toHaveLength(1);
     expect(store.get().cycle.active).toBe(false);
+    const startsAtCompletion = events.filter((e) => e.kind === "cycle:start").length;
 
-    engine.setDemo(false);
-    vi.advanceTimersByTime(20_000);
-    expect(events.filter((e) => e.kind === "cycle:complete")).toHaveLength(1);
+    // Demo stays ON. Still inside the 16 s park window: no new cycle starts.
+    vi.advanceTimersByTime(10_000);
     expect(store.get().cycle.active).toBe(false);
+    expect(events.filter((e) => e.kind === "cycle:start")).toHaveLength(startsAtCompletion);
+
+    // Past the 16 s mark from completion: autoNext releases and a new cycle starts.
+    vi.advanceTimersByTime(10_000);
+    expect(events.filter((e) => e.kind === "cycle:start")).toHaveLength(startsAtCompletion + 1);
+    expect(store.get().cycle.active).toBe(true);
     engine.stop();
   });
 });
