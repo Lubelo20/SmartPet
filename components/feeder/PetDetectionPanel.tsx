@@ -39,7 +39,7 @@ export function PetDetectionPanel({ detection, pet }: PetDetectionPanelProps) {
         <ProgressBar value={conf} tone={conf >= 75 ? "emerald" : conf > 0 ? "rose" : "slate"} />
         <div className="flex justify-between mt-2 text-xs text-slate-400">
           <span>Threshold 75%</span>
-          <span suppressHydrationWarning>Updated {timeAgo(detection.since)}</span>
+          <span>Updated {timeAgo(detection.since)}</span>
         </div>
       </div>
     </Card>
