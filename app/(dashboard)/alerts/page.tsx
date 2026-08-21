@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { LoadingState } from "@/components/ui/LoadingState";
 import { useFeederData } from "@/hooks/useFeederData";
 import type { AlertSeverity } from "@/lib/types";
 
@@ -17,10 +18,12 @@ const FILTERS: [FilterKey, string][] = [
 ];
 
 export default function AlertsPage() {
-  const { alerts, markAlertRead, markAllAlertsRead, loadError, reload } = useFeederData();
+  const { alerts, markAlertRead, markAllAlertsRead, loading, loadError, reload } = useFeederData();
   const [filter, setFilter] = useState<FilterKey>("all");
 
   if (loadError) return <Card><ErrorState message={loadError} onRetry={reload} /></Card>;
+
+  if (loading) return <Card><LoadingState label="Loading alerts" rows={3} /></Card>;
 
   const view = alerts.filter((a) => filter === "all" || a.severity === filter);
   const counts: Record<FilterKey, number> = {

@@ -62,7 +62,7 @@ export default function DevicePage() {
             <ProgressBar value={clamp(((d.rssi + 90) / 45) * 100, 0, 100)} tone={d.rssi > -60 ? "emerald" : "amber"} />
           </StatusCard>
           <StatusCard label="Uptime" icon={Activity} tone="info" value={fmtUptime(d.uptimeS).split(" ")[0]}
-            caption={`Running since ${fmtDate(Date.now() - d.uptimeS * 1000)}`} />
+            caption={<span suppressHydrationWarning>{`Running since ${fmtDate(Date.now() - d.uptimeS * 1000)}`}</span>} />
         </div>
 
         <Card className="p-5">

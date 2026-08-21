@@ -158,11 +158,16 @@ command changes.
    `NEXT_PUBLIC_FIREBASE_API_KEY`, `..._AUTH_DOMAIN`, `..._DATABASE_URL`, `..._PROJECT_ID`.
 2. Implement `createFirebaseAdapter()` with the same method names the mock adapter
    uses — `list / get / create / update / remove / append / markRead`.
-3. Set `NEXT_PUBLIC_DATA_SOURCE=firebase`. No component changes.
+3. Set `NEXT_PUBLIC_DATA_SOURCE=firebase`, and add the branch on `CONFIG.dataSource` in
+   `services/services-provider.tsx:37` (currently hardcoded to `createMockAdapter()` — the
+   code comment there already flags this as unwritten). That's a one-line change in one
+   file; once it's in, no component changes are needed.
 
-Suggested collections: `pets`, `feedingHistory`, `feedingSchedules`, `alerts`,
-`sensorReadings`, and a Realtime Database node `devices/{deviceId}/telemetry` for the
-live stream (RTDB is a better fit than Firestore for 1–2 Hz sensor pushes).
+Collections live under `households/{hid}/` (`pets`, `feedingHistory`, `feedingSchedules`,
+`alerts`), not at the root — `memberUids` on the household document is the security
+boundary. This is not optional detail to improvise at stage 2; see the approved data model
+in `docs/superpowers/specs/2026-08-20-feeder-platform-design.md` (§4) for the authoritative
+collection layout, including the RTDB telemetry node and security-rule shape.
 
 ## Swapping the simulator for real telemetry
 

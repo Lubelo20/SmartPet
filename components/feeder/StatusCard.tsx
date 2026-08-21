@@ -9,7 +9,7 @@ type StatusCardProps = {
   label: string;
   value: ReactNode;
   unit?: string;
-  caption?: string;
+  caption?: ReactNode;
   icon: LucideIcon;
   tone?: Tone;
   children?: ReactNode;

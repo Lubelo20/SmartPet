@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
+import { LoadingState } from "@/components/ui/LoadingState";
 import { Modal } from "@/components/ui/Modal";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { SectionHead } from "@/components/ui/SectionHead";
@@ -18,7 +19,7 @@ import { Select } from "@/components/ui/Select";
 import { useFeederData } from "@/hooks/useFeederData";
 
 export default function FeedingPage() {
-  const { telemetry: t, pets, schedules, loadError, reload, dispense, stopCycle, toggleSchedule } = useFeederData();
+  const { telemetry: t, pets, schedules, loading, loadError, reload, dispense, stopCycle, toggleSchedule } = useFeederData();
   const [petId, setPetId] = useState(pets[0]?.id || "");
   const [portion, setPortion] = useState(pets[0]?.portionG || 120);
   const [confirm, setConfirm] = useState(false);
@@ -31,6 +32,8 @@ export default function FeedingPage() {
   useEffect(() => { if (!petId && pets[0]) setPetId(pets[0].id); }, [petId, pets]);
 
   if (loadError) return <Card><ErrorState message={loadError} onRetry={reload} /></Card>;
+
+  if (loading) return <Card><LoadingState label="Loading feeding data" rows={4} /></Card>;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
