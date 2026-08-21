@@ -4,94 +4,100 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository is
 
-Two files, no toolchain:
+A Next.js 15 (App Router) + TypeScript frontend for an IoT smart pet feeder (ESP32 · OV2640
+camera · HC-SR04 ultrasonic · HX711 + load cell · SG90 servo · Wi-Fi/MQTT). Data comes from an
+in-memory mock adapter and device telemetry from an in-browser simulator, so the app runs and
+demos with no backend and no hardware attached.
 
-- `smart-pet-feeder-dashboard.jsx` — the entire frontend (~2,300 lines) for an IoT smart pet feeder
-  (ESP32 · OV2640 camera · HC-SR04 ultrasonic · HX711 + load cell · SG90 servo · Wi-Fi/MQTT).
-  Deliberately one runnable file so it previews immediately.
-- `PORTING-TO-NEXTJS.md` — the file→folder mapping for splitting it into a Next.js + TypeScript app,
-  plus the Firebase/MQTT wiring notes and the ESP32 telemetry payload contract.
-
-There is no `package.json`, no build, no lint config and no tests. The file assumes its host
-environment provides `react`, `lucide-react`, `recharts` and Tailwind CSS.
-
-## Verifying a change
-
-The only check available locally is a parse/transform pass:
+## Commands
 
 ```bash
-npx --yes esbuild smart-pet-feeder-dashboard.jsx --loader:.jsx=jsx --outfile=/dev/null
+npm run dev         # dev server, http://localhost:3000
+npm test             # vitest run — unit tests for lib/ and services/
+npm run typecheck    # tsc --noEmit
+npm run lint         # eslint
+npm run build        # next build — also type-checks and lints
 ```
 
-That catches syntax errors only. Anything behavioural has to be checked by previewing the file in a
-React host (Claude artifact preview, Vite, or the Next.js target described in `PORTING-TO-NEXTJS.md`).
-Do not add a build system, dependency manifest or test runner unless asked — single-file previewability
-is the point of the current layout.
+Run all four before calling anything done; `npm run build` is the closest thing to an
+end-to-end check since it renders every route.
 
 ## Architecture
 
-The file is divided into ten numbered banner sections (`1. CONFIG` … `10. APP SHELL`). Those banners
-are the table of contents *and* the future folder boundaries listed in `PORTING-TO-NEXTJS.md` — put new
-code in the section it belongs to rather than next to the code that calls it.
+Four layers, strictly one-directional — config/types/utils → services → components → routes:
 
-Four layers, strictly one-directional:
+1. **`lib/`** — `config.ts` (env-driven `CONFIG`), `types.ts` (every shared type), `utils.ts`,
+   `analytics.ts` (`deriveAnalytics`), `seed-data.ts`, `nav.ts` (`NAV`, the route table).
+2. **`services/`** — `contract.ts` defines `FeederServices`; `adapters/mock.ts` implements it
+   today, seeded and latency-simulated. `telemetry.ts` (`TelemetryStore`, pub/sub),
+   `simulation.ts` (`SimulationEngine`, the ESP32 stand-in), `commands.ts` (`commandBus`, the
+   only outbound path to the device). `services-provider.tsx` builds all four exactly once, in
+   a `useState` initialiser, so nothing is constructed at module scope.
+3. **`components/`** — `ui/` primitives (`Card`, `Button`, `Modal`, …), `feeder/` domain
+   components, `layout/` (`DashboardShell`, `Sidebar`, `Header`, `DemoPanel`).
+4. **`app/(dashboard)/**/page.tsx`** — the nine routes, one per page.
 
-1. **CONFIG** (§1) — everything environment-driven via `NEXT_PUBLIC_*`. Credentials come from
-   `.env.local`; never inline them.
-2. **DATA LAYER** (§3, §3b) — `services` (pets / feedings / schedules / alerts). Today
-   `createMockAdapter()`; a commented `createFirebaseAdapter()` slot sits beside it. The adapter method
-   names are the contract — `list / get / create / update / remove / append / markRead / markAllRead`,
-   all Promise-returning with simulated latency, so the UI already handles async and loading states.
-   Swapping adapters must require zero component changes.
-3. **TELEMETRY LAYER** (§4) — inbound and outbound device traffic:
-   - `telemetry` (`TelemetryStore`) is a tiny pub/sub store holding one object: `device`, `hopper`,
-     `bowl`, `distanceCm`, `servo`, `camera`, `detection`, `cycle`, `demo`, `history`.
-   - `engine` (`SimulationEngine`) stands in for the real ESP32 stream. It ticks every 400 ms and runs
-     the feeding-cycle state machine (`cycle.step` 0→5: detected → identified → portion → dispensing →
-     checking → reached), writing only into `TelemetryStore` and emitting events via `engine.on`.
-     Replacing it with an MQTT/RTDB subscription must leave the UI untouched; keep it in the repo behind
-     Demo Mode so the dashboard can be shown without hardware.
-   - `commandBus.send(type, payload)` is the only outbound path. Types in use: `feeding.start`,
-     `feeding.stop`, `portion.update`, `schedule.update`, `device.config`. It rejects when the device is
-     offline — callers are expected to catch and toast.
-4. **UI LAYER** (§5–§10) — no component touches a transport. Components read state through
-   `useTelemetry()` (or props threaded down as `t`) and act through `commandBus`.
+**No component talks to a transport.** Components read `useFeederData()` (app-level state:
+pets, feedings, schedules, alerts, settings, telemetry, and the mutators) or
+`useTelemetry(store)` (a raw telemetry subscription) and act through `commandBus`, indirectly,
+via the mutators `useFeederData()` exposes. Never call `commandBus.send` or a `services.*`
+method directly from a page component.
 
-### Where side effects live
+### Why state lives in `FeederDataProvider`, not in pages
 
-`AppShell` (§10) owns *all* cross-cutting reaction to device events. Its single `engine.on(...)` effect
-is the one place that turns engine events (`cycle:start`, `cycle:complete`, `cycle:stopped`,
-`detection:unknown`, `device:offline` / `device:online`, `food:low`, `food:refilled`, `sensor:error`)
-into toasts, feeding-history rows and alerts. Pages never raise alerts or append history themselves —
-they call `commandBus`/`services` and let the event come back around. Keep it that way.
+`app/(dashboard)/layout.tsx` wraps every route in
+`ServicesProvider > ToastProvider > FeederDataProvider > DashboardShell`. `FeederDataProvider`
+(`hooks/useFeederData.tsx`) owns pets/feedings/schedules/alerts/telemetry/settings and every
+mutator, and its single `engine.on(...)` effect is the **one place** that turns simulator
+events (`cycle:start`, `cycle:complete`, `cycle:stopped`, `detection:unknown`,
+`device:offline`/`device:online`, `food:low`, `food:refilled`, `sensor:error`) into toasts,
+feeding-history rows and alerts. Pages call a mutator (e.g. `dispense`, `toggleSchedule`) and
+let the resulting engine event come back around to raise the toast/alert — they never raise
+one directly. This keeps that reaction logic in one place instead of duplicated per route.
 
-### Routing
+## Standing constraints (earned during the port — do not relax without a reason)
 
-No router. `AppShell` holds a `route` string, the `NAV` array (§10) defines key/label/icon/title/subtitle,
-and a `switch` in `AppShell` maps `route` to a page component. Adding a page means one `NAV` entry plus
-one `case`. `PORTING-TO-NEXTJS.md` maps each page to an App Router route.
+- **Read `process.env.NEXT_PUBLIC_*` literally at the read site**, e.g.
+  `process.env.NEXT_PUBLIC_DATA_SOURCE`. Next.js inlines env vars via static text replacement
+  at build time; it does not follow a destructured alias like
+  `const { NEXT_PUBLIC_X } = process.env`, so the value would come back `undefined` at runtime.
+  See `lib/config.ts` for the pattern.
+- **No `Date.now()`, `new Date()` or `Math.random()` at module scope.** A value computed at
+  import time is captured once at server-render time and baked into the initial HTML;
+  the client then computes a different value on hydration and React throws a hydration
+  mismatch. Compute these inside functions/effects/render, not in top-level `const`.
+- **Relative time is hydration-safe if seeded from a client timestamp; absolute time
+  rendered during render is not.** `timeAgo()` etc. are fine because they're called from
+  render with props, not from a module-scope clock. `CameraPreview` is the one exception that
+  renders `new Date().toLocaleTimeString()` directly during render (it's an on-screen "camera
+  timestamp" overlay) — that's the only place `suppressHydrationWarning` is used, and it should
+  stay that way; don't add it elsewhere as a shortcut around a real mismatch.
+- **Tailwind v4 has no `bg-opacity-*`.** Express background opacity with slash syntax
+  (`bg-slate-900/70`). Plain `opacity-*` (whole-element opacity) is unaffected and still valid.
+- **No arbitrary-value Tailwind classes** (`w-[123px]`, `text-[#f00]`). Use inline `style` for
+  anything Tailwind's scale can't express (aspect ratio, SVG transitions, dynamic widths) —
+  see `CameraPreview` for the pattern.
 
-### Conventions
+## Conventions
 
-- **Styling:** Tailwind utility classes only — no arbitrary-value syntax (`bg-opacity-40`, not `bg-white/40`)
-  so the file renders in restricted preview environments. Inline `style` is used only for things Tailwind
-  can't express (aspect ratio, SVG transitions, dynamic widths).
-- **Semantic colour:** the `TONE` map (§6) drives every success/warning/critical/info/neutral surface.
-  Pet colours go through `PET_COLOUR` (Tailwind classes) and `PET_HEX` (hex, for recharts props).
-- **Primitives:** `Card`, `Button`, `Badge`, `Input`, `Select`, `Modal`, `ProgressBar`, `Field`,
-  `LoadingState`, `EmptyState`, `ErrorState` (§6). Compose these instead of hand-rolling markup.
-- **Determinism:** §2 has a seeded LCG (`rnd`, `rint`) so the mock history and confidence values are
-  reproducible across reloads. Use `rnd()` for anything that should stay stable; `Math.random()` is
-  reserved for genuine jitter and `uid()`.
-- **Camera:** `CameraPreview` (§7) is a hand-drawn SVG scene with an animated detection box — there is no
-  video element. It reacts to `detection.state` (`idle | detected | identifying | identified | unknown`).
-- **Analytics:** `useAnalytics` (§8) derives every chart series (daily totals, per-pet, portion accuracy,
-  mean error, success rate) from `feedings` + `pets`. Add derivations there, not inside page components.
+- **`TONE`** (`components/ui/tone.ts`) — the success/warning/critical/info/neutral map every
+  status surface (badges, alerts, toasts) is built from. Add a new semantic colour there, not
+  ad hoc in a component.
+- **`PET_COLOUR`** (`components/feeder/pet-colour.ts`) — Tailwind classes per pet colour, for
+  badges/avatars. **`PET_HEX`** (`lib/analytics.ts`) — the same palette as hex, for recharts
+  `stroke`/`fill` props, which can't take Tailwind classes.
+- **`deriveAnalytics`** (`lib/analytics.ts`) — every chart derivation (daily totals, per-pet
+  totals, portion accuracy, mean error, success rate) lives here, not in page components.
+  `hooks/useAnalytics.ts` is a thin `useMemo` wrapper around it.
 
-## Hardware-facing contracts
+## Where to look next
 
-When touching anything that will eventually cross the wire, keep it consistent with
-`PORTING-TO-NEXTJS.md`: the ESP32 telemetry JSON shape, the command payload table, the suggested Firebase
-collections (`pets`, `feedingHistory`, `feedingSchedules`, `alerts`, `sensorReadings`, and RTDB
-`devices/{deviceId}/telemetry`), and the ~1 Hz idle / ~5 Hz dispensing publish rates. Update that document
-in the same change whenever a payload or command changes.
+- `docs/ARCHITECTURE.md` — the full folder-by-folder architecture, the data/telemetry/command
+  contracts, and the plan for swapping the mock adapter for Firebase and the simulator for real
+  MQTT/RTDB telemetry.
+- `docs/superpowers/specs/2026-08-20-feeder-platform-design.md` — the stage 2 design (Firestore
+  backend, auth, household ownership). It branches off `createMockAdapter()` in
+  `services/services-provider.tsx` and nothing else in this codebase.
+- `smart-pet-feeder-dashboard.jsx` — the original single-file dashboard this app was ported
+  from. It's still in the repo as the pre-port visual reference until a human does a
+  side-by-side sign-off of all nine routes against it; don't delete or edit it.
