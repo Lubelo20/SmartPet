@@ -23,8 +23,10 @@ describe("auth provider", () => {
   it("subscribes with onAuthStateChanged and unsubscribes", () => {
     const source = readFileSync("lib/firebase/auth-provider.tsx", "utf8");
     expect(source).toContain("onAuthStateChanged");
-    // The effect must return the unsubscribe, or a second mount double-subscribes.
-    expect(/return\s+onAuthStateChanged|return\s+unsub/.test(source)).toBe(true);
+    // The effect must tear the subscription down, or a second mount
+    // double-subscribes. Firebase is imported dynamically here, so the cleanup
+    // calls a captured unsub rather than returning onAuthStateChanged directly.
+    expect(/return\s+onAuthStateChanged|return\s+unsub|unsub\?\.\(\)/.test(source)).toBe(true);
   });
 
   it("does not construct firebase at module scope", () => {

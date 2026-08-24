@@ -3,14 +3,8 @@
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode,
 } from "react";
-import {
-  createUserWithEmailAndPassword, GoogleAuthProvider, onAuthStateChanged,
-  signInWithEmailAndPassword, signInWithPopup, signOut,
-} from "firebase/auth";
 import { CONFIG } from "@/lib/config";
 import { toFeederError } from "@/lib/errors";
-import { getFirebase } from "@/lib/firebase/client";
-import { acceptInviteFor, createHouseholdFor, resolveHousehold } from "@/lib/firebase/household";
 import { MOCK_SESSION, type AuthUser, type AuthValue } from "@/lib/firebase/session";
 import type { SessionStatus } from "@/lib/types";
 
@@ -27,6 +21,16 @@ export function useAuth(): AuthValue {
 
 const noop = async () => {};
 
+/**
+ * Every Firebase import in this file is dynamic. A static one pulls the SDK into
+ * the shared bundle for every route, including mock mode, which never calls any
+ * of it. The imports below are all inside functions that only run when
+ * `CONFIG.dataSource` is "firebase".
+ */
+const firebaseAuthModule = () => import("firebase/auth");
+const clientModule = () => import("@/lib/firebase/client");
+const householdModule = () => import("@/lib/firebase/household");
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const isMock = CONFIG.dataSource === "mock";
 
@@ -41,39 +45,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isMock) return;
-    const { auth, db } = getFirebase();
+    let cancelled = false;
+    let unsub: (() => void) | null = null;
 
-    return onAuthStateChanged(auth, async (fbUser) => {
-      if (!fbUser) {
-        setUser(null);
-        setHouseholdId(null);
-        setPendingInviteHid(null);
-        setStatus("signed-out");
-        return;
-      }
+    void (async () => {
+      const [{ onAuthStateChanged }, { getFirebase }, { resolveHousehold }] = await Promise.all([
+        firebaseAuthModule(), clientModule(), householdModule(),
+      ]);
+      if (cancelled) return;
+      const { auth, db } = getFirebase();
 
-      const next: AuthUser = {
-        uid: fbUser.uid, email: fbUser.email, displayName: fbUser.displayName,
-      };
-      setUser(next);
-      setStatus("resolving");
+      unsub = onAuthStateChanged(auth, async (fbUser) => {
+        if (!fbUser) {
+          setUser(null);
+          setHouseholdId(null);
+          setPendingInviteHid(null);
+          setStatus("signed-out");
+          return;
+        }
 
-      try {
-        const { householdId: hid, pendingInviteHid: invite } =
-          await resolveHousehold(db, next.uid, next.email);
-        setHouseholdId(hid);
-        setPendingInviteHid(invite);
-        setStatus(hid ? "ready" : "no-household");
-      } catch {
-        setHouseholdId(null);
-        setPendingInviteHid(null);
-        setStatus("no-household");
-      }
-    });
+        const next: AuthUser = {
+          uid: fbUser.uid, email: fbUser.email, displayName: fbUser.displayName,
+        };
+        setUser(next);
+        setStatus("resolving");
+
+        try {
+          const { householdId: hid, pendingInviteHid: invite } =
+            await resolveHousehold(db, next.uid, next.email);
+          setHouseholdId(hid);
+          setPendingInviteHid(invite);
+          setStatus(hid ? "ready" : "no-household");
+        } catch {
+          setHouseholdId(null);
+          setPendingInviteHid(null);
+          setStatus("no-household");
+        }
+      });
+    })();
+
+    return () => { cancelled = true; unsub?.(); };
   }, [isMock]);
 
   const reresolve = useCallback(async () => {
     if (isMock || !user) return;
+    const [{ getFirebase }, { resolveHousehold }] = await Promise.all([
+      clientModule(), householdModule(),
+    ]);
     const { db } = getFirebase();
     const { householdId: hid, pendingInviteHid: invite } =
       await resolveHousehold(db, user.uid, user.email);
@@ -99,40 +117,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       status, user, householdId, pendingInviteHid,
 
       signInWithPassword: async (email, password) => {
-        const { auth } = getFirebase();
-        try { await signInWithEmailAndPassword(auth, email, password); }
+        const [{ signInWithEmailAndPassword }, { getFirebase }] =
+          await Promise.all([firebaseAuthModule(), clientModule()]);
+        try { await signInWithEmailAndPassword(getFirebase().auth, email, password); }
         catch (e) { throw toFeederError(e, "Could not sign you in. Check your email and password."); }
       },
 
       registerWithPassword: async (email, password) => {
-        const { auth } = getFirebase();
-        try { await createUserWithEmailAndPassword(auth, email, password); }
+        const [{ createUserWithEmailAndPassword }, { getFirebase }] =
+          await Promise.all([firebaseAuthModule(), clientModule()]);
+        try { await createUserWithEmailAndPassword(getFirebase().auth, email, password); }
         catch (e) { throw toFeederError(e, "Could not create that account."); }
       },
 
       signInWithGoogle: async () => {
-        const { auth } = getFirebase();
-        try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+        const [{ GoogleAuthProvider, signInWithPopup }, { getFirebase }] =
+          await Promise.all([firebaseAuthModule(), clientModule()]);
+        try { await signInWithPopup(getFirebase().auth, new GoogleAuthProvider()); }
         catch (e) { throw toFeederError(e, "Google sign-in did not complete."); }
       },
 
       signOutNow: async () => {
-        const { auth } = getFirebase();
-        try { await signOut(auth); }
+        const [{ signOut }, { getFirebase }] =
+          await Promise.all([firebaseAuthModule(), clientModule()]);
+        try { await signOut(getFirebase().auth); }
         catch (e) { throw toFeederError(e, "Could not sign you out."); }
       },
 
       acceptInvite: async () => {
         if (!user?.email) throw toFeederError(null, "You need an email address to accept an invitation.");
-        const { db } = getFirebase();
-        await acceptInviteFor(db, user.uid, user.email);
+        const [{ getFirebase }, { acceptInviteFor }] =
+          await Promise.all([clientModule(), householdModule()]);
+        await acceptInviteFor(getFirebase().db, user.uid, user.email);
         await reresolve();
       },
 
       createHousehold: async () => {
         if (!user) throw toFeederError(null, "You need to be signed in to create a household.");
-        const { db } = getFirebase();
-        await createHouseholdFor(db, user.uid, user.displayName);
+        const [{ getFirebase }, { createHouseholdFor }] =
+          await Promise.all([clientModule(), householdModule()]);
+        await createHouseholdFor(getFirebase().db, user.uid, user.displayName);
         await reresolve();
       },
     };

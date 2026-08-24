@@ -165,7 +165,7 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
         break;
       default: break;
     }
-  }), [pets, toast, raiseAlert, engine, services, telemetry]);
+  }), [pets, toast, raiseAlert, engine, services, telemetry, reportWriteFailure]);
 
   const dispense = useCallback(async (pet: Pet, portionG: number) => {
     if (!pet) return;
