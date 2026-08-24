@@ -4,13 +4,41 @@ import { dayKey, delay, uid } from "@/lib/utils";
 import type { FeederServices } from "@/services/contract";
 import { FeederError } from "@/lib/errors";
 
+/**
+ * Mock mode has no backend, so without this a reload rebuilt the adapter and
+ * every saved setting reverted to its default. Wrapped in try/catch throughout:
+ * localStorage throws in private windows and is absent during SSR, and neither
+ * is a reason to fail a read.
+ */
+const SETTINGS_KEY = "feeder.settings";
+
+function loadStoredSettings(): Settings | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_KEY);
+    return raw ? (JSON.parse(raw) as Settings) : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeSettings(next: Settings): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+  } catch {
+    // Private windows and full quotas both land here. The in-memory copy is
+    // still correct for this session, so there is nothing useful to report.
+  }
+}
+
 export function createMockAdapter(): FeederServices {
   const store = {
     pets: buildSeedPets(),
     feedings: buildSeedFeedings(),
     schedules: buildSeedSchedules(),
     alerts: buildSeedAlerts(),
-    settings: buildSeedSettings(),
+    settings: loadStoredSettings() ?? buildSeedSettings(),
   };
   const latency = (): Promise<void> => delay(120 + Math.random() * 180);
 
@@ -89,6 +117,7 @@ export function createMockAdapter(): FeederServices {
       async save(next: Settings) {
         await latency();
         store.settings = { ...next, notifications: { ...next.notifications } };
+        storeSettings(store.settings);
         return { ...store.settings, notifications: { ...store.settings.notifications } };
       },
     },
