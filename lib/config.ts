@@ -1,6 +1,7 @@
 export const CONFIG = {
   dataSource: process.env.NEXT_PUBLIC_DATA_SOURCE ?? "mock",
   transport: process.env.NEXT_PUBLIC_TRANSPORT ?? "simulation",
+  useEmulators: process.env.NEXT_PUBLIC_USE_EMULATORS === "true",
   deviceId: process.env.NEXT_PUBLIC_DEVICE_ID ?? "ESP32-PETFEEDER-001",
   // Credentials come from .env.local and stay there.
   firebase: {
