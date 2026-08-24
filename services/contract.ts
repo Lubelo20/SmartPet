@@ -1,4 +1,4 @@
-import type { Alert, FeedingRecord, NewPet, NewSchedule, Pet, Schedule } from "@/lib/types";
+import type { Alert, FeedingRecord, NewPet, NewSchedule, Pet, Schedule, Settings } from "@/lib/types";
 
 export interface FeederServices {
   pets: {
@@ -17,6 +17,15 @@ export interface FeederServices {
     create(row: NewSchedule): Promise<Schedule>;
     update(id: string, patch: Partial<Schedule>): Promise<Schedule>;
     remove(id: string): Promise<boolean>;
+  };
+  /**
+   * Stored as two documents — device preferences on the household, notification
+   * preferences per member — but composed into one `Settings` here. The split
+   * is the adapter's business; no component should know about it.
+   */
+  settings: {
+    get(): Promise<Settings>;
+    save(next: Settings): Promise<Settings>;
   };
   alerts: {
     list(): Promise<Alert[]>;

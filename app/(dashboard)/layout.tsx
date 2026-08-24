@@ -21,7 +21,7 @@ import { ServicesProvider } from "@/services/services-provider";
  * Firebase config at all.
  */
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { status, householdId } = useAuth();
+  const { status, householdId, user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -41,10 +41,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  if (status !== "ready" || !householdId) return null;
+  if (status !== "ready" || !householdId || !user) return null;
 
   return (
-    <ServicesProvider householdId={householdId} key={householdId}>
+    <ServicesProvider householdId={householdId} uid={user.uid} key={householdId}>
       <ToastProvider>
         <FeederDataProvider>
           <DashboardShell>{children}</DashboardShell>

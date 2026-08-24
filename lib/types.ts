@@ -63,11 +63,23 @@ export type EngineEvent =
   | { kind: "food:refilled" }
   | { kind: "sensor:error" };
 
-export type Settings = {
+/** Describes the feeder itself — shared by every member of the household. */
+export type DeviceSettings = {
   deviceName: string; timezone: string; unit: string;
   defaultPortion: number; maxDaily: number; confidenceThreshold: number;
-  notifications: { lowFood: boolean; offline: boolean; feedingError: boolean; unknownPet: boolean };
 };
+
+/** Personal to one member: which events are allowed to interrupt them. */
+export type NotificationSettings = {
+  lowFood: boolean; offline: boolean; feedingError: boolean; unknownPet: boolean;
+};
+
+/**
+ * The composed view every component uses. It is stored as two documents —
+ * `settings/device` on the household and `members/{uid}` per person — and the
+ * adapters do the splitting, because storage shape is theirs to know.
+ */
+export type Settings = DeviceSettings & { notifications: NotificationSettings };
 
 export type Tone = "success" | "warning" | "critical" | "info" | "neutral";
 export type ToastInput = { tone?: Tone; title: string; message?: string; duration?: number };

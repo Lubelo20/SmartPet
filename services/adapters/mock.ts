@@ -1,5 +1,5 @@
-import type { Alert, FeedingRecord, NewPet, NewSchedule, Pet, Schedule } from "@/lib/types";
-import { buildSeedAlerts, buildSeedFeedings, buildSeedPets, buildSeedSchedules } from "@/lib/seed-data";
+import type { Alert, FeedingRecord, NewPet, NewSchedule, Pet, Schedule, Settings } from "@/lib/types";
+import { buildSeedAlerts, buildSeedFeedings, buildSeedPets, buildSeedSchedules, buildSeedSettings } from "@/lib/seed-data";
 import { dayKey, delay, uid } from "@/lib/utils";
 import type { FeederServices } from "@/services/contract";
 import { FeederError } from "@/lib/errors";
@@ -10,6 +10,7 @@ export function createMockAdapter(): FeederServices {
     feedings: buildSeedFeedings(),
     schedules: buildSeedSchedules(),
     alerts: buildSeedAlerts(),
+    settings: buildSeedSettings(),
   };
   const latency = (): Promise<void> => delay(120 + Math.random() * 180);
 
@@ -78,6 +79,17 @@ export function createMockAdapter(): FeederServices {
         await latency();
         store.schedules = store.schedules.filter((s) => s.id !== id);
         return true;
+      },
+    },
+    settings: {
+      async get() {
+        await latency();
+        return { ...store.settings, notifications: { ...store.settings.notifications } };
+      },
+      async save(next: Settings) {
+        await latency();
+        store.settings = { ...next, notifications: { ...next.notifications } };
+        return { ...store.settings, notifications: { ...store.settings.notifications } };
       },
     },
     alerts: {

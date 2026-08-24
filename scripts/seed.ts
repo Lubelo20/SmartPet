@@ -14,7 +14,7 @@
 import { cert, initializeApp, applicationDefault, type AppOptions } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import {
-  buildSeedAlerts, buildSeedFeedings, buildSeedPets, buildSeedSchedules,
+  buildSeedAlerts, buildSeedFeedings, buildSeedPets, buildSeedSchedules, buildSeedSettings,
 } from "../lib/seed-data";
 
 const args = process.argv.slice(2);
@@ -55,6 +55,7 @@ async function main() {
   const schedules = buildSeedSchedules();
   const feedings = buildSeedFeedings();
   const alerts = buildSeedAlerts();
+  const { notifications, ...device } = buildSeedSettings();
 
   const batch = db.batch();
   batch.set(db.doc(`households/${hid}`), {
@@ -87,12 +88,18 @@ async function main() {
       ...rest, timestamp: Timestamp.fromMillis(timestamp),
     });
   }
+  // The two halves of the settings split. Both adapters fall back to the same
+  // defaults when these are absent, so seeding them is about making the demo
+  // household complete rather than about correctness.
+  batch.set(db.doc(`households/${hid}/settings/device`), device);
+  batch.set(db.doc(`households/${hid}/members/${uid}`), { notifications });
+
   await batch.commit();
 
   console.log(
     `Seeded ${projectId}/households/${hid} (owner ${uid}): ` +
     `${pets.length} pets, ${schedules.length} schedules, ` +
-    `${feedings.length} feedings, ${alerts.length} alerts.`,
+    `${feedings.length} feedings, ${alerts.length} alerts, settings.`,
   );
 }
 

@@ -8,6 +8,8 @@ import { toFeederError } from "@/lib/errors";
 import type {
   Alert, AlertSeverity, EngineEvent, FeedingRecord, NewPet, Pet, Schedule, Settings, Telemetry,
 } from "@/lib/types";
+import { shouldToast } from "@/lib/notifications";
+import { buildSeedSettings } from "@/lib/seed-data";
 import { uid } from "@/lib/utils";
 import type { CommandType } from "@/services/commands";
 import { useServices } from "@/services/services-provider";
@@ -69,19 +71,18 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pendingFeed, setPendingFeed] = useState<PendingFeed | null>(null);
 
-  const [settings, setSettings] = useState<Settings>({
-    deviceName: "Kitchen feeder", timezone: "Africa/Johannesburg (SAST)", unit: "Grams (g)",
-    defaultPortion: 120, maxDaily: 600, confidenceThreshold: 75,
-    notifications: { lowFood: true, offline: true, feedingError: true, unknownPet: true },
-  });
+  // Seeded from the same defaults both adapters fall back to, then replaced by
+  // whatever `load()` reads. They are only ever visible for the first paint.
+  const [settings, setSettings] = useState<Settings>(buildSeedSettings);
 
   const load = useCallback(async () => {
     setLoading(true); setLoadError(null);
     try {
-      const [p, f, s, a] = await Promise.all([
-        services.pets.list(), services.feedings.list(), services.schedules.list(), services.alerts.list(),
+      const [p, f, s, a, cfg] = await Promise.all([
+        services.pets.list(), services.feedings.list(), services.schedules.list(),
+        services.alerts.list(), services.settings.get(),
       ]);
-      setPets(p); setFeedings(f); setSchedules(s); setAlerts(a);
+      setPets(p); setFeedings(f); setSchedules(s); setAlerts(a); setSettings(cfg);
     } catch (e) { setLoadError(errorMessage(e, "Could not load feeder data.")); }
     setLoading(false);
   }, [services]);
@@ -105,6 +106,15 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
     toast({ tone: "warning", title, message: toFeederError(e, fallback).message });
   }, [toast]);
 
+  /**
+   * Toasts that a notification preference can silence. Only the interruption is
+   * gated — `raiseAlert` always runs, so the Alerts page and the stored record
+   * are unaffected by muting.
+   */
+  const notify = useCallback((kind: string, input: Parameters<typeof toast>[0]) => {
+    if (shouldToast(kind, settings.notifications)) toast(input);
+  }, [toast, settings.notifications]);
+
   const raiseAlert = useCallback((severity: AlertSeverity, type: string, title: string, message: string, source: string) => {
     const row: Alert = { id: uid("AL"), severity, type, title, message, source, timestamp: Date.now(), read: false };
     setAlerts((prev) => [row, ...prev]);
@@ -126,7 +136,7 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
         void services.feedings.append(evt.record)
           .catch(reportWriteFailure("Feeding not recorded", "The feeding record was not saved."));
         if (evt.short) {
-          toast({ tone: "critical", title: "Cycle ended short", message: `Only ${evt.record.actualG} g of ${evt.record.targetG} g was dispensed.` });
+          notify("cycle:short", { tone: "critical", title: "Cycle ended short", message: `Only ${evt.record.actualG} g of ${evt.record.targetG} g was dispensed.` });
           raiseAlert("critical", "Feeding error", "Target food weight was not reached",
             `The cycle for ${p ? p.name : "the pet"} stopped at ${evt.record.actualG} g of ${evt.record.targetG} g. Check the hopper outlet.`, "Servo / HX711");
         } else {
@@ -142,30 +152,33 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
         toast({ tone: "warning", title: "Cycle stopped", message: evt.reason });
         break;
       case "detection:unknown":
-        toast({ tone: "warning", title: "Unknown pet", message: "Confidence was below the threshold, so no food was dispensed." });
+        notify("detection:unknown", { tone: "warning", title: "Unknown pet", message: "Confidence was below the threshold, so no food was dispensed." });
         raiseAlert("warning", "Unknown pet", "Pet detected but classification confidence is too low",
           "A frame was captured but no enrolled pet matched above 75%. Feeding was blocked.", "Camera");
         break;
       case "device:offline":
-        toast({ tone: "critical", title: "Feeder offline", message: "Unable to communicate with the feeder. Check the device connection." });
+        notify("device:offline", { tone: "critical", title: "Feeder offline", message: "Unable to communicate with the feeder. Check the device connection." });
         raiseAlert("critical", "Device offline", "ESP32 has not communicated", "No heartbeat received. Feeding commands will be rejected until it reconnects.", "Wi-Fi");
         break;
       case "device:online":
-        toast({ tone: "success", title: "Feeder reconnected", message: "Telemetry is streaming again." });
+        notify("device:online", { tone: "success", title: "Feeder reconnected", message: "Telemetry is streaming again." });
         break;
       case "food:low":
         raiseAlert("warning", "Low food", "Food level is below 20%", "Hopper is running low. Refill to keep the schedule running.", "HX711");
+        // Until now low food was only discoverable by visiting the Alerts page,
+        // which left the lowFood preference governing nothing at all.
+        notify("food:low", { tone: "warning", title: "Food running low", message: `Hopper is down to ${Math.round(evt.grams)} g. Refill to keep the schedule running.` });
         break;
       case "food:refilled":
         toast({ tone: "success", title: "Hopper refilled", message: "Food level reset to full." });
         break;
       case "sensor:error":
         raiseAlert("critical", "Sensor error", "Load cell is not responding", "The HX711 returned no reading for 10 consecutive samples.", "HX711");
-        toast({ tone: "critical", title: "Sensor error", message: "The load cell stopped reporting." });
+        notify("sensor:error", { tone: "critical", title: "Sensor error", message: "The load cell stopped reporting." });
         break;
       default: break;
     }
-  }), [pets, toast, raiseAlert, engine, services, telemetry, reportWriteFailure]);
+  }), [pets, toast, notify, raiseAlert, engine, services, telemetry, reportWriteFailure]);
 
   const dispense = useCallback(async (pet: Pet, portionG: number) => {
     if (!pet) return;
@@ -234,8 +247,10 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
 
   const saveSettings = useCallback((f: Settings) => {
     setSettings(f);
+    void services.settings.save(f)
+      .catch(reportWriteFailure("Settings not saved", "Your preferences were not stored."));
     void sendCommand("device.config", f, "Settings saved", "Preferences were pushed to the feeder.");
-  }, [sendCommand]);
+  }, [services, sendCommand, reportWriteFailure]);
 
   const value: FeederData = {
     telemetry: t, pets, feedings, schedules, alerts, loading, loadError,

@@ -7,7 +7,9 @@ import {
   alertFromDoc, alertToDoc, feedingFromDoc, feedingToDoc,
   petFromDoc, petToDoc, scheduleFromDoc, scheduleToDoc,
 } from "@/lib/firebase/mapping";
-import type { Alert, FeedingRecord, NewPet, NewSchedule, Pet } from "@/lib/types";
+import { buildSeedSettings } from "@/lib/seed-data";
+import { DEFAULT_NOTIFICATIONS } from "@/lib/notifications";
+import type { Alert, DeviceSettings, FeedingRecord, NewPet, NewSchedule, NotificationSettings, Pet, Settings } from "@/lib/types";
 import type { FeederServices } from "@/services/contract";
 
 /**
@@ -16,7 +18,7 @@ import type { FeederServices } from "@/services/contract";
  * emulator. Every method rethrows through toFeederError, so nothing above this
  * layer ever sees a raw FirebaseError.
  */
-export function createFirebaseAdapter(db: Firestore, hid: string): FeederServices {
+export function createFirebaseAdapter(db: Firestore, hid: string, uid: string): FeederServices {
   const col = (name: string) => collection(db, "households", hid, name);
   const ref = (name: string, id: string) => doc(db, "households", hid, name, id);
 
@@ -82,6 +84,41 @@ export function createFirebaseAdapter(db: Firestore, hid: string): FeederService
       remove: (id) => guard("Could not delete the schedule.", async () => {
         await deleteDoc(ref("feedingSchedules", id));
         return true;
+      }),
+    },
+    /**
+     * Two documents: device preferences on the household, notification
+     * preferences on the member. Composed here so no component learns the
+     * split. A missing document falls back to the shared defaults rather than
+     * to an empty object, so a household that predates this feature reads the
+     * same values the mock adapter would return.
+     */
+    settings: {
+      get: () => guard("Could not load settings.", async () => {
+        const defaults = buildSeedSettings();
+        const [deviceSnap, memberSnap] = await Promise.all([
+          getDoc(ref("settings", "device")),
+          getDoc(ref("members", uid)),
+        ]);
+        const device = deviceSnap.exists()
+          ? (deviceSnap.data() as DeviceSettings) : null;
+        const notifications = memberSnap.exists()
+          ? (memberSnap.data().notifications as NotificationSettings | undefined) : undefined;
+        return {
+          ...defaults,
+          ...(device ?? {}),
+          notifications: { ...DEFAULT_NOTIFICATIONS, ...(notifications ?? {}) },
+        };
+      }),
+      save: (next: Settings) => guard("Could not save settings.", async () => {
+        const { notifications, ...device } = next;
+        await Promise.all([
+          setDoc(ref("settings", "device"), device),
+          // merge: the member document is this user's, but it is not only for
+          // notifications — later stages may add fields beside them.
+          setDoc(ref("members", uid), { notifications }, { merge: true }),
+        ]);
+        return next;
       }),
     },
     alerts: {

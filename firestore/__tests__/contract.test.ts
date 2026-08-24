@@ -58,7 +58,7 @@ type Case = { name: string; make: () => Promise<FeederServices> };
 
 const cases: Case[] = [
   { name: "mock", make: async () => createMockAdapter() },
-  { name: "firebase", make: async () => createFirebaseAdapter(await seedFirestore(), HID) },
+  { name: "firebase", make: async () => createFirebaseAdapter(await seedFirestore(), HID, UID) },
 ];
 
 describe.each(cases)("$name adapter satisfies the contract", ({ make }) => {
@@ -132,6 +132,31 @@ describe.each(cases)("$name adapter satisfies the contract", ({ make }) => {
     expect((await svc.alerts.list()).find((a) => a.id === first.id)?.read).toBe(true);
     await svc.alerts.markAllRead();
     expect((await svc.alerts.list()).every((a) => a.read)).toBe(true);
+  });
+
+  it("returns settings, falling back to defaults when nothing is stored", async () => {
+    const cfg = await svc.settings.get();
+    expect(cfg.defaultPortion).toBe(120);
+    expect(cfg.notifications).toEqual({
+      lowFood: true, offline: true, feedingError: true, unknownPet: true,
+    });
+  });
+
+  it("round-trips settings across both halves of the split", async () => {
+    const before = await svc.settings.get();
+    const next = {
+      ...before,
+      deviceName: "Hallway feeder",
+      maxDaily: 750,
+      notifications: { ...before.notifications, lowFood: false },
+    };
+    await svc.settings.save(next);
+    const after = await svc.settings.get();
+    expect(after.deviceName).toBe("Hallway feeder");
+    expect(after.maxDaily).toBe(750);
+    expect(after.notifications.lowFood).toBe(false);
+    // The other toggles must survive a partial change.
+    expect(after.notifications.offline).toBe(true);
   });
 
   it("appends an alert", async () => {

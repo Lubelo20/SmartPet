@@ -56,8 +56,19 @@ service cloud.firestore {
 
       allow delete: if false;
 
+      // Shared household data. The collection list is explicit rather than a
+      // bare wildcard: rule matches are OR'd, so a wildcard that grants write
+      // to any member cannot later be narrowed for one collection beneath it.
       match /{collection}/{docId} {
-        allow read, write: if isMember(hid);
+        allow read, write: if isMember(hid)
+          && collection in ['pets', 'feedingHistory', 'feedingSchedules', 'alerts', 'settings'];
+      }
+
+      // One document per member, holding preferences personal to them. Any
+      // member may read them; only the owner may write their own.
+      match /members/{memberUid} {
+        allow read: if isMember(hid);
+        allow write: if isMember(hid) && request.auth.uid == memberUid;
       }
     }
 

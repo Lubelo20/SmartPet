@@ -1,5 +1,14 @@
-import type { Alert, FeedingRecord, Pet, Schedule } from "@/lib/types";
+import { DEFAULT_NOTIFICATIONS } from "@/lib/notifications";
+import type { Alert, FeedingRecord, Pet, Schedule, Settings } from "@/lib/types";
 import { resetSeed, rint, rnd, uid } from "@/lib/utils";
+
+export function buildSeedSettings(): Settings {
+  return {
+    deviceName: "Kitchen feeder", timezone: "Africa/Johannesburg (SAST)", unit: "Grams (g)",
+    defaultPortion: 120, maxDaily: 600, confidenceThreshold: 75,
+    notifications: { ...DEFAULT_NOTIFICATIONS },
+  };
+}
 
 export function buildSeedPets(): Pet[] {
   return [

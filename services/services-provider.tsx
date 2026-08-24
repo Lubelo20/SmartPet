@@ -54,7 +54,7 @@ function build(services: FeederServices): ServiceInstances {
  * synchronous; only Firebase mode waits a tick for its chunk, and it is already
  * waiting on auth resolution by that point.
  */
-export function ServicesProvider({ householdId, children }: { householdId: string; children: ReactNode }) {
+export function ServicesProvider({ householdId, uid, children }: { householdId: string; uid: string; children: ReactNode }) {
   const [instances, setInstances] = useState<ServiceInstances | null>(
     () => (CONFIG.dataSource === "firebase" ? null : build(createMockAdapter())),
   );
@@ -69,11 +69,11 @@ export function ServicesProvider({ householdId, children }: { householdId: strin
         import("@/lib/firebase/client"),
       ]);
       if (cancelled) return;
-      setInstances(build(createFirebaseAdapter(getFirebase().db, householdId)));
+      setInstances(build(createFirebaseAdapter(getFirebase().db, householdId, uid)));
     })();
 
     return () => { cancelled = true; };
-  }, [householdId]);
+  }, [householdId, uid]);
 
   if (!instances) {
     return (

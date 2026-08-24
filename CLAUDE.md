@@ -111,8 +111,18 @@ must stay true: `AuthProvider` yields a fixed fake session in mock mode before i
 touches `getFirebase()`.
 
 - **Data is household-scoped.** Everything lives under `households/{hid}/` — `pets`,
-  `feedingHistory`, `feedingSchedules`, `alerts` — and `memberUids` on the household
-  document is the security boundary.
+  `feedingHistory`, `feedingSchedules`, `alerts`, `settings/device`, `members/{uid}` — and
+  `memberUids` on the household document is the security boundary.
+- **Settings are two documents, one type.** `settings/device` holds what describes the
+  feeder (shared by the household); `members/{uid}` holds the notification toggles
+  (personal). The adapters compose them into the single `Settings` the UI sees — no
+  component knows about the split.
+- **The subcollection rule names its collections explicitly.** Rule matches are OR'd, so a
+  bare `match /{collection}/{docId}` granting write to any member could not later be
+  narrowed for `members/{uid}`. Adding a collection means adding it to that list.
+- **Muting a notification silences the toast, never the alert.** `shouldToast`
+  (`lib/notifications.ts`) gates the interruption; `raiseAlert` always runs. Losing the
+  record of a failed cycle because someone flipped a toggle would be the dangerous choice.
 - **Security is `firestore.rules`, not the client.** The route gate in
   `app/(dashboard)/layout.tsx` is UX only; it stops someone seeing a broken screen, it does
   not protect data. There is deliberately no Next middleware — with no server session

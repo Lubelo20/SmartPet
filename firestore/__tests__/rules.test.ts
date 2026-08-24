@@ -116,6 +116,58 @@ describe("subcollections", () => {
   });
 });
 
+describe("settings and member preferences", () => {
+  it("lets any member read and write shared device settings", async () => {
+    await seedHousehold([ALICE.uid, BOB.uid]);
+    await assertSucceeds(setDoc(doc(bob(), "households", HID, "settings", "device"), {
+      deviceName: "Kitchen feeder", defaultPortion: 120,
+    }));
+    await assertSucceeds(getDoc(doc(alice(), "households", HID, "settings", "device")));
+  });
+
+  it("denies a non-member the settings document", async () => {
+    await seedHousehold();
+    await assertFails(getDoc(doc(mallory(), "households", HID, "settings", "device")));
+    await assertFails(setDoc(doc(mallory(), "households", HID, "settings", "device"), { deviceName: "x" }));
+  });
+
+  it("lets a member write their own preferences", async () => {
+    await seedHousehold([ALICE.uid, BOB.uid]);
+    await assertSucceeds(setDoc(doc(bob(), "households", HID, "members", BOB.uid), {
+      notifications: { lowFood: false, offline: true, feedingError: true, unknownPet: true },
+    }));
+  });
+
+  it("refuses to write another member's preferences", async () => {
+    // The shared-data wildcard would have allowed this, which is why the
+    // collection list in the rules is explicit rather than a bare wildcard.
+    await seedHousehold([ALICE.uid, BOB.uid]);
+    await assertFails(setDoc(doc(bob(), "households", HID, "members", ALICE.uid), {
+      notifications: { lowFood: false, offline: false, feedingError: false, unknownPet: false },
+    }));
+  });
+
+  it("lets a member read another member's preferences", async () => {
+    await seedHousehold([ALICE.uid, BOB.uid]);
+    await assertSucceeds(getDoc(doc(bob(), "households", HID, "members", ALICE.uid)));
+  });
+
+  it("denies a non-member every member document", async () => {
+    await seedHousehold();
+    await assertFails(getDoc(doc(mallory(), "households", HID, "members", ALICE.uid)));
+    await assertFails(setDoc(doc(mallory(), "households", HID, "members", MALLORY.uid), {
+      notifications: { lowFood: true, offline: true, feedingError: true, unknownPet: true },
+    }));
+  });
+
+  it("refuses an unknown subcollection outright", async () => {
+    // The explicit list means a typo'd or unexpected collection is denied
+    // rather than silently readable by every member.
+    await seedHousehold();
+    await assertFails(setDoc(doc(alice(), "households", HID, "secrets", "x"), { a: 1 }));
+  });
+});
+
 describe("membership changes", () => {
   it("lets an invited user add their own uid and nothing else", async () => {
     await seedHousehold();

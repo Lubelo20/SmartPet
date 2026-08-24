@@ -173,7 +173,10 @@ const services = CONFIG.dataSource === "firebase"
 ```
 
 - **`services/adapters/firebase.ts`** implements `FeederServices` against
-  `households/{hid}/{pets,feedingHistory,feedingSchedules,alerts}`. It takes its `Firestore`
+  `households/{hid}/{pets,feedingHistory,feedingSchedules,alerts,settings,members}`.
+  `settings.get()/save()` span two documents — `settings/device` for what describes the
+  feeder, `members/{uid}` for that person's notification toggles — composed into the single
+  `Settings` the UI sees. It therefore takes a `uid` alongside the household id. It takes its `Firestore`
   instance and household id as arguments rather than reaching for globals, which is what
   lets the contract suite point it at the emulator.
 - **`lib/firebase/client.ts`** initialises lazily and memoises. Initialising at module scope

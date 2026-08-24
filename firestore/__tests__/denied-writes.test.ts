@@ -42,6 +42,7 @@ const intruderAdapter = () =>
     testEnv.authenticatedContext("intruder", { email: "intruder@example.com" })
       .firestore() as unknown as Firestore,
     HID,
+    "intruder",
   );
 
 describe("denied writes reject as mapped FeederErrors", () => {
