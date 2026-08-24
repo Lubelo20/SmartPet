@@ -16,7 +16,8 @@ export const initialTelemetry = (now: number): Telemetry => ({
     rssi: -58, firmware: "v1.4.2", mqtt: "connected",
     lastHeartbeat: now, uptimeS: 183642, freeHeapKb: 178,
   },
-  hopper: { grams: 742, capacity: CONFIG.hopperCapacityG },
+  // Demo starts the hopper about half full, whatever it is sized at.
+  hopper: { grams: Math.round(CONFIG.hopperCapacityG * 0.49), capacity: CONFIG.hopperCapacityG },
   bowl: { grams: 0, targetG: 0 },
   distanceCm: 64,
   servo: "READY",

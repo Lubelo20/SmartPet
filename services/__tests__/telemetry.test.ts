@@ -9,7 +9,7 @@ describe("initialTelemetry", () => {
     expect(t.detection.since).toBe(1_000);
     expect(t.device.online).toBe(true);
     expect(t.cycle.active).toBe(false);
-    expect(t.hopper.capacity).toBe(1500);
+    expect(t.hopper.capacity).toBe(800);
   });
 });
 

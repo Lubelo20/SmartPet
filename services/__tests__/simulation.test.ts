@@ -106,9 +106,9 @@ describe("SimulationEngine", () => {
     engine.scenario("online");
     expect(store.get().device.online).toBe(true);
     engine.scenario("low-food");
-    expect(store.get().hopper.grams).toBe(210);
+    expect(store.get().hopper.grams).toBe(112);  // 800 * 0.2 * 0.7, below the low-food threshold
     engine.scenario("refill");
-    expect(store.get().hopper.grams).toBe(1500);
+    expect(store.get().hopper.grams).toBe(800);
     expect(events.map((e) => e.kind)).toEqual([
       "device:offline", "device:online", "food:low", "food:refilled",
     ]);

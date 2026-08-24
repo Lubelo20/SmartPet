@@ -1,7 +1,9 @@
 # Smart Pet Feeder — hardware design (enclosure + electronics)
 
 Date: 2026-08-24
-Status: **approved design, not yet built.** No part of this has been printed or wired.
+Status: **implemented as source, not yet built.** Every part compiles and every
+dimensional assertion passes; nothing has been printed or wired.
+Implementation: `design/`. Plan: `docs/superpowers/plans/2026-08-24-feeder-hardware.md`.
 
 Scope: the 3D-printed enclosure and the electronics that fill it, for the feeder the
 dashboard in this repository already drives. Firmware is specified here only as an
@@ -35,7 +37,7 @@ HX711 with load cell(s), SG90-class servo, Wi-Fi/MQTT.
 | Dispensing | Rotating drum/paddle valve | Self-metering, works with a stock 180° servo, seals the hopper at rest |
 | Scale | Cat / small dog | Every part prints unsplit on a 220 × 220 × 250 bed |
 | Weighing | Two load cells, one HX711 | The HX711 has two channels; both dashboard readings become real measurements |
-| Layout | Tower and tray | Product-like silhouette, both weights isolated, ~9 printed parts |
+| Layout | Tower and tray | Product-like silhouette, both weights isolated, 10 printed parts |
 | Power | 5 V 2 A wall supply, no battery | Camera plus continuous Wi-Fi makes battery operation impractical |
 | Board | AI-Thinker ESP32-CAM | Cheapest, most available, what the reference builds use — at the cost of zero spare GPIO |
 | Hopper capacity | 2.0 L ≈ 800 g | 1500 g needs 3.8 L, which will not print in one piece under 250 mm Z |
@@ -125,7 +127,12 @@ and a forward arm carrying the bowl platform anchor.
 **Head** — camera at 30° down-and-forward, framing a pet's face at the bowl; HC-SR04 lower
 on the tower front, horizontal, covering the approach zone at 20–60 cm within its ~15° cone.
 
-Nine printed parts. Tallest is the hopper at 198 mm; widest is the base at 190 mm.
+**Ten** printed parts. Tallest is the hopper at 202 mm; widest is the base at 190 mm.
+
+The tenth is a discovery from implementation: the base plus an integral forward arm
+measured ~260 mm in Y and would not print. The arm is therefore its own part,
+lapped and bolted to the base (`bowl-arm.scad`), and `common.scad` now asserts
+`chute_forward + 40 <= bed_y` so the same mistake fails the render next time.
 
 ## 5. Electronics
 
@@ -239,7 +246,8 @@ design/
   scad/
     common.scad          every parameter and shared module — the one file to edit
     lid.scad  hopper.scad  valve-housing.scad  drum.scad
-    chute.scad  tower.scad  base.scad  bowl-platform.scad  head.scad
+    chute.scad  tower.scad  base.scad  bowl-arm.scad
+    bowl-platform.scad  head.scad
     plate-all.scad       assembled preview
   stl/                   rendered output
   electronics/

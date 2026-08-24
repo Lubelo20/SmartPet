@@ -7,7 +7,7 @@ describe("CONFIG", () => {
     expect(CONFIG.dataSource).toBe("mock");
     expect(CONFIG.transport).toBe("simulation");
     expect(CONFIG.deviceId).toBe("ESP32-PETFEEDER-001");
-    expect(CONFIG.hopperCapacityG).toBe(1500);
+    expect(CONFIG.hopperCapacityG).toBe(800);
     expect(CONFIG.lowFoodThreshold).toBe(0.2);
   });
 
@@ -15,5 +15,12 @@ describe("CONFIG", () => {
     const source = readFileSync("lib/config.ts", "utf8");
     expect(source).toContain("process.env.NEXT_PUBLIC_DATA_SOURCE");
     expect(source).not.toMatch(/const\s+env\s*=/);
+  });
+});
+
+describe("hopper capacity", () => {
+  it("matches the printed hopper in design/scad/common.scad", () => {
+    // 2.0 L at 0.40 g/cm^3 dry kibble bulk density.
+    expect(CONFIG.hopperCapacityG).toBe(800);
   });
 });

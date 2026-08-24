@@ -91,10 +91,14 @@ export class SimulationEngine {
         this.store.set({ device: { ...s.device, online: true, mqtt: "connected", lastHeartbeat: Date.now() }, camera: { ...s.camera, online: true } });
         this.emit({ kind: "device:online" });
         break;
-      case "low-food":
-        this.store.set({ hopper: { ...s.hopper, grams: 210 } });
-        this.emit({ kind: "food:low", grams: 210 });
+      case "low-food": {
+        // Deliberately below CONFIG.lowFoodThreshold so the scenario always fires
+        // the alert, whatever the hopper is sized at.
+        const low = Math.round(CONFIG.hopperCapacityG * CONFIG.lowFoodThreshold * 0.7);
+        this.store.set({ hopper: { ...s.hopper, grams: low } });
+        this.emit({ kind: "food:low", grams: low });
         break;
+      }
       case "refill":
         this.store.set({ hopper: { ...s.hopper, grams: CONFIG.hopperCapacityG } });
         this.emit({ kind: "food:refilled" });

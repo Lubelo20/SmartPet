@@ -14,6 +14,7 @@ export const CONFIG = {
     topicIn: "petfeeder/+/telemetry",
     topicOut: "petfeeder/{deviceId}/command",
   },
-  hopperCapacityG: 1500,
+  // 2.0 L hopper at 0.40 g/cm^3 — see design/scad/common.scad.
+  hopperCapacityG: 800,
   lowFoodThreshold: 0.2,
 } as const;
