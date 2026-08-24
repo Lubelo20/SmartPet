@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "emulators": "firebase emulators:start --only auth,firestore",
-    "test:rules": "firebase emulators:exec --only auth,firestore \"vitest run --config vitest.rules.config.ts\""
+    "test:rules": "firebase emulators:exec --only auth,firestore \"vitest run --config vitest.rules.config.ts\"",
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "firebase": "^12.18.0",
@@ -30,8 +31,10 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.23",
+    "firebase-admin": "^14.3.0",
     "firebase-tools": "^15.28.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.12",
     "typescript": "^5",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.11"

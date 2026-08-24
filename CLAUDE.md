@@ -28,8 +28,9 @@ Four layers, strictly one-directional — config/types/utils → services → co
 
 1. **`lib/`** — `config.ts` (env-driven `CONFIG`), `types.ts` (every shared type), `utils.ts`,
    `analytics.ts` (`deriveAnalytics`), `seed-data.ts`, `nav.ts` (`NAV`, the route table).
-2. **`services/`** — `contract.ts` defines `FeederServices`; `adapters/mock.ts` implements it
-   today, seeded and latency-simulated. `telemetry.ts` (`TelemetryStore`, pub/sub),
+2. **`services/`** — `contract.ts` defines `FeederServices`; `adapters/mock.ts` and
+   `adapters/firebase.ts` both implement it, and `services-provider.tsx` picks one on
+   `CONFIG.dataSource`. `telemetry.ts` (`TelemetryStore`, pub/sub),
    `simulation.ts` (`SimulationEngine`, the ESP32 stand-in), `commands.ts` (`commandBus`, the
    only outbound path to the device). `services-provider.tsx` builds all four exactly once, in
    a `useState` initialiser, so nothing is constructed at module scope.
@@ -101,3 +102,33 @@ one directly. This keeps that reaction logic in one place instead of duplicated 
 - `smart-pet-feeder-dashboard.jsx` — the original single-file dashboard this app was ported
   from. It's still in the repo as the pre-port visual reference until a human does a
   side-by-side sign-off of all nine routes against it; don't delete or edit it.
+
+## Stage 2: auth, households and Firestore
+
+`CONFIG.dataSource` selects the adapter — `mock` (default) or `firebase`. **With no
+`.env.local` at all the whole dashboard still runs on mock data with no sign-in**, and that
+must stay true: `AuthProvider` yields a fixed fake session in mock mode before it ever
+touches `getFirebase()`.
+
+- **Data is household-scoped.** Everything lives under `households/{hid}/` — `pets`,
+  `feedingHistory`, `feedingSchedules`, `alerts` — and `memberUids` on the household
+  document is the security boundary.
+- **Security is `firestore.rules`, not the client.** The route gate in
+  `app/(dashboard)/layout.tsx` is UX only; it stops someone seeing a broken screen, it does
+  not protect data. There is deliberately no Next middleware — with no server session
+  cookie it would be theatre. Rules are covered by 22 emulator tests; change them and run
+  `npm run test:rules`.
+- **Invites are rules-only.** There is no privileged server. A user holding an invite that
+  names their email may add exactly their own uid to a household and change nothing else.
+  `acceptInviteFor` must use `arrayUnion` — the rule compares against
+  `resource.data.memberUids.concat([uid])`.
+- **`Timestamp` exists in exactly one module**, `lib/firebase/mapping.ts`. Everything above
+  it speaks epoch milliseconds, so swapping adapters never changes a domain type. Firestore
+  rejects `undefined`, so optional fields are omitted rather than written.
+- **Both adapters must stay interchangeable.** `firestore/__tests__/contract.test.ts` runs
+  one suite twice, once per adapter. Fix drift in the adapter, never by making a test lie.
+- **Errors are `FeederError`** (`lib/errors.ts`). No component should ever see a raw
+  `FirebaseError`; `toFeederError` maps codes to sentences a pet owner can act on.
+- **`ServicesProvider` takes `householdId` as a prop** and is remounted with
+  `key={householdId}`. Do not mutate the instances when the id arrives — `useTelemetry`
+  reads its store on mount only and would be left pinned to a stale one.

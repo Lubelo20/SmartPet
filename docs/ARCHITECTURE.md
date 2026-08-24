@@ -10,8 +10,11 @@ see "The pre-port reference" at the end of this document.
 
 ```
 app/
-  layout.tsx                        <html> shell, global metadata, imports globals.css
-  (dashboard)/layout.tsx            ServicesProvider > ToastProvider > FeederDataProvider > DashboardShell
+  layout.tsx                        <html> shell, global metadata, AuthProvider, globals.css
+  (auth)/layout.tsx                 centred single-column shell, no FeederDataProvider
+  (auth)/sign-in/page.tsx           email/password + Google
+  (auth)/join/page.tsx              invite acceptance
+  (dashboard)/layout.tsx            auth gate > ServicesProvider > ToastProvider > FeederDataProvider > DashboardShell
   (dashboard)/page.tsx              DashboardPage
   (dashboard)/live/page.tsx         LivePage
   (dashboard)/pets/page.tsx         PetsPage
@@ -36,6 +39,9 @@ hooks/
   useAnalytics.ts     thin useMemo wrapper around lib/analytics.ts
 lib/
   config.ts      CONFIG — see lib/types.ts note below
+  errors.ts      FeederError, toFeederError() — the typed error both adapters throw
+  firebase/      client.ts (lazy init), auth-provider.tsx, session.ts, household.ts,
+                 mapping.ts (the ONLY module where Timestamp exists)
   types.ts       every shared type: Pet, FeedingRecord, Schedule, Alert, Telemetry,
                  DeviceStatus, EngineEvent, Settings, Tone, ToastInput, …
   utils.ts       fmtDate, fmtTime, fmtShort, timeAgo, fmtUptime, clamp, uid, delay,
@@ -46,6 +52,7 @@ lib/
 services/
   contract.ts             FeederServices — the adapter interface (pets/feedings/schedules/alerts)
   adapters/mock.ts         createMockAdapter() — in-memory, seeded, latency-simulated
+  adapters/firebase.ts     createFirebaseAdapter(db, hid) — household-scoped Firestore
   services-provider.tsx    ServicesProvider — builds services/telemetry/engine/commandBus once
   telemetry.ts             TelemetryStore (pub/sub) + initialTelemetry() + WORKFLOW_STEPS
   simulation.ts            SimulationEngine — the in-browser stand-in for the ESP32 stream
@@ -76,9 +83,9 @@ document to keep in sync. Read that file directly for `Pet`, `FeedingRecord`, `S
 
 1. **CONFIG** (`lib/config.ts`) — everything environment-driven via `NEXT_PUBLIC_*`.
    Credentials come from `.env.local`; never inline them.
-2. **DATA LAYER** (`services/contract.ts`, `services/adapters/mock.ts`) — today
-   `createMockAdapter()`; stage 2 branches this file on `CONFIG.dataSource` for a Firebase
-   adapter. The adapter method names are the contract — `list / get / create / update /
+2. **DATA LAYER** (`services/contract.ts`, `services/adapters/`) — `createMockAdapter()` or
+   `createFirebaseAdapter()`, chosen on `CONFIG.dataSource` in `services-provider.tsx`.
+   The adapter method names are the contract — `list / get / create / update /
    remove / append / markRead / markAllRead`, all Promise-returning with simulated latency,
    so the UI already handles async and loading states. Swapping adapters must require zero
    component changes.
@@ -152,22 +159,37 @@ plan. The stage 2 spec (`docs/superpowers/specs/2026-08-20-feeder-platform-desig
 on them staying accurate, so update this section in the same change whenever a payload or
 command changes.
 
-## Swapping mock data for Firebase
+## Firebase: how the swap actually works
 
-1. `npm i firebase` and put the keys in `.env.local` (never in the repo):
-   `NEXT_PUBLIC_FIREBASE_API_KEY`, `..._AUTH_DOMAIN`, `..._DATABASE_URL`, `..._PROJECT_ID`.
-2. Implement `createFirebaseAdapter()` with the same method names the mock adapter
-   uses — `list / get / create / update / remove / append / markRead`.
-3. Set `NEXT_PUBLIC_DATA_SOURCE=firebase`, and add the branch on `CONFIG.dataSource` in
-   `services/services-provider.tsx:37` (currently hardcoded to `createMockAdapter()` — the
-   code comment there already flags this as unwritten). That's a one-line change in one
-   file; once it's in, no component changes are needed.
+This section described a plan until stage 2 landed; it now describes code.
 
-Collections live under `households/{hid}/` (`pets`, `feedingHistory`, `feedingSchedules`,
-`alerts`), not at the root — `memberUids` on the household document is the security
-boundary. This is not optional detail to improvise at stage 2; see the approved data model
-in `docs/superpowers/specs/2026-08-20-feeder-platform-design.md` (§4) for the authoritative
-collection layout, including the RTDB telemetry node and security-rule shape.
+`services/services-provider.tsx` is the only construction site, and the branch is one
+expression:
+
+```ts
+const services = CONFIG.dataSource === "firebase"
+  ? createFirebaseAdapter(getFirebase().db, householdId)
+  : createMockAdapter();
+```
+
+- **`services/adapters/firebase.ts`** implements `FeederServices` against
+  `households/{hid}/{pets,feedingHistory,feedingSchedules,alerts}`. It takes its `Firestore`
+  instance and household id as arguments rather than reaching for globals, which is what
+  lets the contract suite point it at the emulator.
+- **`lib/firebase/client.ts`** initialises lazily and memoises. Initialising at module scope
+  would run during the static prerender, where no config exists. Firestore gets a persistent
+  local cache, so a phone on unreliable wifi renders last-known state instead of an error.
+- **`lib/firebase/mapping.ts`** is the only module where `Timestamp` exists. The domain types
+  in `lib/types.ts` did not change shape when Firestore arrived.
+- **`lib/firebase/auth-provider.tsx`** owns the session. `resolving` is a real state: Firebase
+  restores sessions asynchronously and without it every load flashes the sign-in page.
+- **`firestore.rules`** is the security boundary — household membership via `memberUids`,
+  with a rules-only invite flow. `app/(dashboard)/layout.tsx` gates routes for UX only.
+- **`ServicesProvider` remounts on `key={householdId}`** rather than mutating instances,
+  because `useTelemetry` reads its store on mount only.
+
+Setup, emulators and troubleshooting live in `SETUP.md`. The data model and its reasoning
+are in `docs/superpowers/specs/2026-08-20-feeder-platform-design.md`.
 
 ## Swapping the simulator for real telemetry
 
