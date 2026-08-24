@@ -1,6 +1,9 @@
 "use client";
 
 import { createContext, useContext, useState, type ReactNode } from "react";
+import { CONFIG } from "@/lib/config";
+import { getFirebase } from "@/lib/firebase/client";
+import { createFirebaseAdapter } from "@/services/adapters/firebase";
 import { createMockAdapter } from "@/services/adapters/mock";
 import { createCommandBus, type CommandBus } from "@/services/commands";
 import type { FeederServices } from "@/services/contract";
@@ -29,12 +32,17 @@ export function useServices(): ServiceInstances {
  * seeds its state from the store on mount only, so a store that changed identity
  * would leave the UI pinned to a stale snapshot.
  *
- * Stage 2 replaces the `createMockAdapter()` line with a `CONFIG.dataSource`
- * branch; nothing else in this file changes.
+ * The Firebase adapter needs a household id, which is not known on the first
+ * render. It arrives as a prop rather than being read from auth here, and the
+ * caller remounts this subtree with `key={householdId}` when it changes —
+ * mutating the instances in place would leave `useTelemetry` pinned to a store
+ * it no longer owns.
  */
-export function ServicesProvider({ children }: { children: ReactNode }) {
+export function ServicesProvider({ householdId, children }: { householdId: string; children: ReactNode }) {
   const [instances] = useState<ServiceInstances>(() => {
-    const services = createMockAdapter();
+    const services = CONFIG.dataSource === "firebase"
+      ? createFirebaseAdapter(getFirebase().db, householdId)
+      : createMockAdapter();
     const telemetry = new TelemetryStore(initialTelemetry(Date.now()));
     const engine = new SimulationEngine(telemetry);
     return { services, telemetry, engine, commandBus: createCommandBus(telemetry, engine) };
