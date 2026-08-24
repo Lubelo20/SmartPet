@@ -26,3 +26,6 @@ ui-debug.log
 .vercel
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude Code worktrees and scratch
+.claude/
