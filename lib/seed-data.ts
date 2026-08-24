@@ -50,6 +50,7 @@ export function buildSeedFeedings(): FeedingRecord[] {
       else if (roll > 0.925) { status = "Low confidence"; confidence = 51 + rnd() * 14; }
       rows.push({
         id: uid("FD"),
+        simulated: true,
         timestamp: at.getTime(),
         petId: s.petId,
         targetG: s.target,

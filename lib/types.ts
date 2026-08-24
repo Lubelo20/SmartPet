@@ -11,6 +11,8 @@ export type FeedingRecord = {
   id: string; timestamp: number; petId: string; targetG: number; actualG: number;
   status: "Completed" | "Under-dispensed" | "Low confidence";
   confidence: number; trigger: "Manual" | "Scheduled"; durationS: number;
+  /** True while the device is simulated. Real telemetry writes false. */
+  simulated: boolean;
 };
 
 export type Schedule = {
@@ -69,3 +71,20 @@ export type Settings = {
 
 export type Tone = "success" | "warning" | "critical" | "info" | "neutral";
 export type ToastInput = { tone?: Tone; title: string; message?: string; duration?: number };
+
+export type Household = {
+  id: string;
+  name: string;
+  memberUids: string[];
+  deviceId: string;
+  createdAt: number;
+};
+
+export type Invite = {
+  email: string;
+  hid: string;
+  invitedBy: string;
+  createdAt: number;
+};
+
+export type SessionStatus = "resolving" | "signed-out" | "no-household" | "ready";

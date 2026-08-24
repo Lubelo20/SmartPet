@@ -178,6 +178,9 @@ export class SimulationEngine {
         const short = actual < s.cycle.targetG * 0.9;
         const record: FeedingRecord = {
           id: uid("FD"),
+          // The SimulationEngine is the stand-in for the ESP32; anything it
+          // produces is simulated by definition. Real telemetry writes false.
+          simulated: true,
           timestamp: now,
           petId: s.cycle.petId as string,
           targetG: s.cycle.targetG,

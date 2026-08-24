@@ -10,7 +10,7 @@ const pets: Pet[] = [
 const row = (over: Partial<FeedingRecord>): FeedingRecord => ({
   id: "FD1", timestamp: new Date(2026, 7, 20, 8, 0).getTime(), petId: "PET001",
   targetG: 100, actualG: 100, status: "Completed", confidence: 96,
-  trigger: "Scheduled", durationS: 8, ...over,
+  trigger: "Scheduled", durationS: 8, simulated: true, ...over,
 });
 
 describe("deriveAnalytics", () => {
