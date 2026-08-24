@@ -99,4 +99,16 @@ export type Invite = {
   createdAt: number;
 };
 
+/**
+ * One member of a household, as the Household page shows them. Identity lives
+ * on `members/{uid}` beside that person's notification preferences: the
+ * household document carries uids only, and a list of raw uids tells nobody
+ * anything. Each user writes their own record — the rules allow no one else to.
+ */
+export type HouseholdMember = {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+};
+
 export type SessionStatus = "resolving" | "signed-out" | "no-household" | "ready";

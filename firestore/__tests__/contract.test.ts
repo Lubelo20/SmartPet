@@ -134,6 +134,38 @@ describe.each(cases)("$name adapter satisfies the contract", ({ make }) => {
     expect((await svc.alerts.list()).every((a) => a.read)).toBe(true);
   });
 
+  it("lists the household members", async () => {
+    const members = await svc.household.members();
+    expect(members.length).toBeGreaterThan(0);
+    expect(members.every((m) => typeof m.uid === "string" && m.uid.length > 0)).toBe(true);
+  });
+
+  it("starts with no pending invitations", async () => {
+    expect(await svc.household.invites()).toEqual([]);
+  });
+
+  it("sends an invitation and lists it back, lowercased", async () => {
+    const created = await svc.household.invite("  Newperson@Example.COM ");
+    expect(created.email).toBe("newperson@example.com");
+    const pending = await svc.household.invites();
+    expect(pending.map((i) => i.email)).toContain("newperson@example.com");
+    expect(pending[0].invitedBy).toBeTruthy();
+  });
+
+  it("revokes an invitation", async () => {
+    await svc.household.invite("revokeme@example.com");
+    expect(await svc.household.revokeInvite("revokeme@example.com")).toBe(true);
+    const pending = await svc.household.invites();
+    expect(pending.map((i) => i.email)).not.toContain("revokeme@example.com");
+  });
+
+  it("does not duplicate an invitation to the same address", async () => {
+    await svc.household.invite("twice@example.com");
+    await svc.household.invite("twice@example.com");
+    const pending = (await svc.household.invites()).filter((i) => i.email === "twice@example.com");
+    expect(pending.length).toBe(1);
+  });
+
   it("returns settings, falling back to defaults when nothing is stored", async () => {
     const cfg = await svc.settings.get();
     expect(cfg.defaultPortion).toBe(120);

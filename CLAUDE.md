@@ -36,7 +36,8 @@ Four layers, strictly one-directional — config/types/utils → services → co
    a `useState` initialiser, so nothing is constructed at module scope.
 3. **`components/`** — `ui/` primitives (`Card`, `Button`, `Modal`, …), `feeder/` domain
    components, `layout/` (`DashboardShell`, `Sidebar`, `Header`, `DemoPanel`).
-4. **`app/(dashboard)/**/page.tsx`** — the nine routes, one per page.
+4. **`app/(dashboard)/**/page.tsx`** — ten routes, one per page; `app/(auth)/` holds
+   sign-in and invite acceptance.
 
 **No component talks to a transport.** Components read `useFeederData()` (app-level state:
 pets, feedings, schedules, alerts, settings, telemetry, and the mutators) or
@@ -120,6 +121,13 @@ touches `getFirebase()`.
 - **The subcollection rule names its collections explicitly.** Rule matches are OR'd, so a
   bare `match /{collection}/{docId}` granting write to any member could not later be
   narrowed for `members/{uid}`. Adding a collection means adding it to that list.
+- **Invites are idempotent in the adapter, not the rules.** Re-inviting an address returns
+  the existing invitation instead of writing again: `setDoc` over an existing invite is an
+  *update*, and `allow update: if false` is deliberate — otherwise a member of one household
+  could overwrite an invite another household issued and redirect that person to theirs.
+- **Member identity lives on `members/{uid}`**, written by that user on sign-in
+  (`ensureMemberRecord`). The household document carries uids only, and only the owning user
+  may write their own record, so it cannot be collected centrally.
 - **Muting a notification silences the toast, never the alert.** `shouldToast`
   (`lib/notifications.ts`) gates the interruption; `raiseAlert` always runs. Losing the
   record of a failed cycle because someone flipped a toggle would be the dangerous choice.

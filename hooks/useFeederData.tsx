@@ -6,7 +6,8 @@ import { useToast } from "@/hooks/useToast";
 import { CONFIG } from "@/lib/config";
 import { toFeederError } from "@/lib/errors";
 import type {
-  Alert, AlertSeverity, EngineEvent, FeedingRecord, NewPet, Pet, Schedule, Settings, Telemetry,
+  Alert, AlertSeverity, EngineEvent, FeedingRecord, HouseholdMember, Invite, NewPet, Pet,
+  Schedule, Settings, Telemetry,
 } from "@/lib/types";
 import { shouldToast } from "@/lib/notifications";
 import { buildSeedSettings } from "@/lib/seed-data";
@@ -41,6 +42,11 @@ export type FeederData = {
   markAllAlertsRead: () => void;
   settings: Settings;
   saveSettings: (s: Settings) => void;
+  householdName: string;
+  members: HouseholdMember[];
+  invites: Invite[];
+  inviteMember: (email: string) => Promise<void>;
+  revokeInvite: (email: string) => Promise<void>;
   /** Shell-only: the quick-feed confirmation the layout renders. */
   pendingFeed: PendingFeed | null;
   cancelFeed: () => void;
@@ -70,6 +76,9 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pendingFeed, setPendingFeed] = useState<PendingFeed | null>(null);
+  const [householdName, setHouseholdName] = useState("");
+  const [members, setMembers] = useState<HouseholdMember[]>([]);
+  const [invites, setInvites] = useState<Invite[]>([]);
 
   // Seeded from the same defaults both adapters fall back to, then replaced by
   // whatever `load()` reads. They are only ever visible for the first paint.
@@ -78,11 +87,13 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
   const load = useCallback(async () => {
     setLoading(true); setLoadError(null);
     try {
-      const [p, f, s, a, cfg] = await Promise.all([
+      const [p, f, s, a, cfg, hn, mem, inv] = await Promise.all([
         services.pets.list(), services.feedings.list(), services.schedules.list(),
         services.alerts.list(), services.settings.get(),
+        services.household.name(), services.household.members(), services.household.invites(),
       ]);
       setPets(p); setFeedings(f); setSchedules(s); setAlerts(a); setSettings(cfg);
+      setHouseholdName(hn); setMembers(mem); setInvites(inv);
     } catch (e) { setLoadError(errorMessage(e, "Could not load feeder data.")); }
     setLoading(false);
   }, [services]);
@@ -245,6 +256,28 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
     setAlerts((prev) => prev.map((a) => ({ ...a, read: true })));
   }, [services, reportWriteFailure]);
 
+  const inviteMember = useCallback(async (email: string) => {
+    try {
+      const row = await services.household.invite(email);
+      setInvites((prev) => (prev.some((i) => i.email === row.email) ? prev : [...prev, row]));
+      toast({ tone: "success", title: "Invitation sent", message: `${row.email} can now join this household.` });
+    } catch (e) {
+      toast({ tone: "critical", title: "Could not invite", message: errorMessage(e, "The invitation was not sent.") });
+      throw e;
+    }
+  }, [services, toast]);
+
+  const revokeInvite = useCallback(async (email: string) => {
+    try {
+      await services.household.revokeInvite(email);
+      setInvites((prev) => prev.filter((i) => i.email !== email));
+      toast({ tone: "warning", title: "Invitation revoked", message: `${email} can no longer join.` });
+    } catch (e) {
+      toast({ tone: "critical", title: "Could not revoke", message: errorMessage(e, "The invitation was not revoked.") });
+      throw e;
+    }
+  }, [services, toast]);
+
   const saveSettings = useCallback((f: Settings) => {
     setSettings(f);
     void services.settings.save(f)
@@ -257,6 +290,7 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
     reload: load, requestFeed, dispense, stopCycle, sendCommand,
     createPet, updatePet, deletePet, toggleSchedule,
     markAlertRead, markAllAlertsRead, settings, saveSettings,
+    householdName, members, invites, inviteMember, revokeInvite,
     pendingFeed, cancelFeed, confirmFeed,
   };
 

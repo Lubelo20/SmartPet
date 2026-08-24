@@ -77,7 +77,14 @@ service cloud.firestore {
       allow create: if signedIn() && isMember(request.resource.data.hid);
       allow delete: if signedIn()
         && (request.auth.token.email == email || isMember(resource.data.hid));
-      allow list, update: if false;
+
+      // Members may list the invites for their OWN household, so the Household
+      // page can show what is outstanding and revoke it. Evaluated per
+      // document, so an unconstrained query over every invite in the system is
+      // rejected rather than filtered — the same shape as the households list.
+      allow list: if signedIn() && isMember(resource.data.hid);
+
+      allow update: if false;
     }
   }
 }

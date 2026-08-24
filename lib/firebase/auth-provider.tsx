@@ -49,9 +49,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let unsub: (() => void) | null = null;
 
     void (async () => {
-      const [{ onAuthStateChanged }, { getFirebase }, { resolveHousehold }] = await Promise.all([
+      const [{ onAuthStateChanged }, { getFirebase }, household] = await Promise.all([
         firebaseAuthModule(), clientModule(), householdModule(),
       ]);
+      const { resolveHousehold, ensureMemberRecord } = household;
       if (cancelled) return;
       const { auth, db } = getFirebase();
 
@@ -76,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setHouseholdId(hid);
           setPendingInviteHid(invite);
           setStatus(hid ? "ready" : "no-household");
+          if (hid) void ensureMemberRecord(db, hid, next.uid, next.email, next.displayName);
         } catch {
           setHouseholdId(null);
           setPendingInviteHid(null);

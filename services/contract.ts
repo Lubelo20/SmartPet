@@ -1,4 +1,6 @@
-import type { Alert, FeedingRecord, NewPet, NewSchedule, Pet, Schedule, Settings } from "@/lib/types";
+import type {
+  Alert, FeedingRecord, HouseholdMember, Invite, NewPet, NewSchedule, Pet, Schedule, Settings,
+} from "@/lib/types";
 
 export interface FeederServices {
   pets: {
@@ -17,6 +19,18 @@ export interface FeederServices {
     create(row: NewSchedule): Promise<Schedule>;
     update(id: string, patch: Partial<Schedule>): Promise<Schedule>;
     remove(id: string): Promise<boolean>;
+  };
+  /**
+   * Who shares this feeder. `invite` writes an invite keyed by email that the
+   * recipient redeems on /join; there is no privileged server, so the security
+   * rules are what make that safe.
+   */
+  household: {
+    name(): Promise<string>;
+    members(): Promise<HouseholdMember[]>;
+    invites(): Promise<Invite[]>;
+    invite(email: string): Promise<Invite>;
+    revokeInvite(email: string): Promise<boolean>;
   };
   /**
    * Stored as two documents — device preferences on the household, notification

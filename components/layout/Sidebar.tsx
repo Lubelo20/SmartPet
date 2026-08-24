@@ -5,11 +5,25 @@ import { usePathname } from "next/navigation";
 import { LogOut, PawPrint, Settings, X } from "lucide-react";
 import { CONFIG } from "@/lib/config";
 import { NAV } from "@/lib/nav";
+import { useAuth } from "@/lib/firebase/auth-provider";
 
 type SidebarProps = { unread: number; onClose?: () => void };
 
+/** "Ndumiso Mngomezulu" → "NM"; falls back to the email's first letter. */
+function initials(name: string | null, email: string | null): string {
+  const source = name?.trim();
+  if (source) {
+    const parts = source.split(/\s+/).slice(0, 2);
+    return parts.map((w) => w[0]?.toUpperCase() ?? "").join("") || "?";
+  }
+  return email?.[0]?.toUpperCase() ?? "?";
+}
+
 export function Sidebar({ unread, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { user, signOutNow } = useAuth();
+  // Mock mode runs a fixed fake session, so signing out of it would do nothing.
+  const canSignOut = CONFIG.dataSource !== "mock";
   return (
     <div className="flex flex-col h-full bg-white border-r border-slate-200">
       <div className="flex items-center gap-3 px-5 h-16 border-b border-slate-100">
@@ -40,19 +54,28 @@ export function Sidebar({ unread, onClose }: SidebarProps) {
 
       <div className="p-3 border-t border-slate-100">
         <div className="flex items-center gap-3 px-2 py-2 rounded-xl">
-          <span className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm">NM</span>
+          <span className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm">
+            {initials(user?.displayName ?? null, user?.email ?? null)}
+          </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-slate-900 truncate">Ndumiso Mngomezulu</p>
-            <p className="text-xs text-slate-400 truncate">Feeder owner</p>
+            <p className="text-sm font-semibold text-slate-900 truncate">
+              {user?.displayName || user?.email || "Signed in"}
+            </p>
+            <p className="text-xs text-slate-400 truncate">
+              {user?.displayName && user?.email ? user.email : "Feeder owner"}
+            </p>
           </div>
         </div>
         <div className="mt-1 space-y-1">
           <Link href="/settings" onClick={onClose} className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100">
             <Settings size={16} /> Settings
           </Link>
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100">
-            <LogOut size={16} /> Log out
-          </button>
+          {canSignOut && (
+            <button onClick={() => void signOutNow()}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100">
+              <LogOut size={16} /> Log out
+            </button>
+          )}
         </div>
       </div>
     </div>

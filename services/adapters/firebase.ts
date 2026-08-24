@@ -1,6 +1,6 @@
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query,
-  setDoc, updateDoc, writeBatch, type Firestore,
+  setDoc, updateDoc, where, writeBatch, type Firestore,
 } from "firebase/firestore";
 import { toFeederError } from "@/lib/errors";
 import {
@@ -9,7 +9,10 @@ import {
 } from "@/lib/firebase/mapping";
 import { buildSeedSettings } from "@/lib/seed-data";
 import { DEFAULT_NOTIFICATIONS } from "@/lib/notifications";
-import type { Alert, DeviceSettings, FeedingRecord, NewPet, NewSchedule, NotificationSettings, Pet, Settings } from "@/lib/types";
+import type {
+  Alert, DeviceSettings, FeedingRecord, Invite, NewPet, NewSchedule,
+  NotificationSettings, Pet, Settings,
+} from "@/lib/types";
 import type { FeederServices } from "@/services/contract";
 
 /**
@@ -86,6 +89,76 @@ export function createFirebaseAdapter(db: Firestore, hid: string, uid: string): 
         return true;
       }),
     },
+    household: {
+      name: () => guard("Could not load the household.", async () => {
+        const snap = await getDoc(doc(db, "households", hid));
+        return snap.exists() ? String(snap.data().name ?? "My home") : "My home";
+      }),
+
+      members: () => guard("Could not load the household members.", async () => {
+        const snap = await getDoc(doc(db, "households", hid));
+        const uids: string[] = snap.exists() ? (snap.data().memberUids ?? []) : [];
+        // Identity lives on each member document, which only that user may
+        // write. Anyone who has not signed in since this shipped has no record
+        // yet, so they show as a bare uid rather than disappearing.
+        const docs = await getDocs(col("members"));
+        const byUid = new Map(docs.docs.map((d) => [d.id, d.data()]));
+        return uids.map((u) => {
+          const data = byUid.get(u);
+          return {
+            uid: u,
+            email: data?.email ? String(data.email) : null,
+            displayName: data?.displayName ? String(data.displayName) : null,
+          };
+        });
+      }),
+
+      invites: () => guard("Could not load pending invitations.", async () => {
+        // Constrained by hid: the rules reject an unconstrained query rather
+        // than filtering it, so this shape is required, not just tidy.
+        const snap = await getDocs(query(collection(db, "invites"), where("hid", "==", hid)));
+        return snap.docs.map((d) => ({
+          email: d.id,
+          hid: String(d.data().hid),
+          invitedBy: String(d.data().invitedBy),
+          createdAt: Number(d.data().createdAt ?? 0),
+        }));
+      }),
+
+      invite: (email: string) => guard("Could not send that invitation.", async () => {
+        const key = email.trim().toLowerCase();
+
+        // Inviting the same address twice must not fail. `setDoc` over an
+        // existing document is an update, and invites are `allow update: if
+        // false` on purpose — otherwise a member of one household could
+        // overwrite an invite another household issued and silently redirect
+        // that person to theirs. So re-inviting is a no-op instead.
+        //
+        // A member cannot `get` an arbitrary invite (only the addressee can),
+        // but can list their own household's, which is enough to tell.
+        const existing = await getDocs(query(collection(db, "invites"), where("hid", "==", hid)));
+        const already = existing.docs.find((d) => d.id === key);
+        if (already) {
+          return {
+            email: key,
+            hid: String(already.data().hid),
+            invitedBy: String(already.data().invitedBy),
+            createdAt: Number(already.data().createdAt ?? 0),
+          };
+        }
+
+        const row: Invite = { email: key, hid, invitedBy: uid, createdAt: Date.now() };
+        const { email: _key, ...stored } = row;
+        await setDoc(doc(db, "invites", key), stored);
+        return row;
+      }),
+
+      revokeInvite: (email: string) => guard("Could not revoke that invitation.", async () => {
+        await deleteDoc(doc(db, "invites", email));
+        return true;
+      }),
+    },
+
     /**
      * Two documents: device preferences on the household, notification
      * preferences on the member. Composed here so no component learns the

@@ -240,6 +240,40 @@ describe("invites", () => {
     await assertFails(getDoc(doc(mallory(), "invites", BOB.email)));
   });
 
+  it("lets a member list the invites for their own household", async () => {
+    await seedHousehold();
+    await seedInvite(BOB.email);
+    const q = query(collection(alice(), "invites"), where("hid", "==", HID));
+    await assertSucceeds(getDocs(q));
+  });
+
+  it("rejects an unconstrained invite query", async () => {
+    // Invites are keyed by email, so an unconstrained list would hand every
+    // signed-in user every invited email address in the system.
+    await seedHousehold();
+    await seedInvite(BOB.email);
+    await assertFails(getDocs(collection(alice(), "invites")));
+  });
+
+  it("rejects listing another household's invites", async () => {
+    await seedHousehold();
+    await seedInvite(BOB.email);
+    const q = query(collection(mallory(), "invites"), where("hid", "==", HID));
+    await assertFails(getDocs(q));
+  });
+
+  it("lets a member revoke an invite their household issued", async () => {
+    await seedHousehold();
+    await seedInvite(BOB.email);
+    await assertSucceeds(deleteDoc(doc(alice(), "invites", BOB.email)));
+  });
+
+  it("refuses a non-member revoking someone else's invite", async () => {
+    await seedHousehold();
+    await seedInvite(BOB.email);
+    await assertFails(deleteDoc(doc(mallory(), "invites", BOB.email)));
+  });
+
   it("lets the invitee delete their own invite once used", async () => {
     await seedHousehold();
     await seedInvite(BOB.email);

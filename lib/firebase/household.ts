@@ -57,6 +57,34 @@ export async function createHouseholdFor(
   }
 }
 
+/**
+ * Records who a uid belongs to, on that user's own member document — the only
+ * document the rules let them write. The household carries uids alone, and a
+ * list of raw uids tells nobody anything.
+ *
+ * Called after a session resolves rather than only at join time, so members who
+ * predate this record heal themselves on next sign-in. `merge` keeps the
+ * notification preferences that live on the same document.
+ */
+export async function ensureMemberRecord(
+  db: Firestore,
+  hid: string,
+  uid: string,
+  email: string | null,
+  displayName: string | null,
+): Promise<void> {
+  try {
+    await setDoc(
+      doc(db, "households", hid, "members", uid),
+      { email: email ?? null, displayName: displayName ?? null },
+      { merge: true },
+    );
+  } catch {
+    // Cosmetic only: without it the member shows as a bare uid. Never worth
+    // failing a sign-in over.
+  }
+}
+
 export async function acceptInviteFor(
   db: Firestore,
   uid: string,

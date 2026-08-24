@@ -1,4 +1,6 @@
-import type { Alert, FeedingRecord, NewPet, NewSchedule, Pet, Schedule, Settings } from "@/lib/types";
+import type {
+  Alert, FeedingRecord, HouseholdMember, Invite, NewPet, NewSchedule, Pet, Schedule, Settings,
+} from "@/lib/types";
 import { buildSeedAlerts, buildSeedFeedings, buildSeedPets, buildSeedSchedules, buildSeedSettings } from "@/lib/seed-data";
 import { dayKey, delay, uid } from "@/lib/utils";
 import type { FeederServices } from "@/services/contract";
@@ -39,6 +41,14 @@ export function createMockAdapter(): FeederServices {
     schedules: buildSeedSchedules(),
     alerts: buildSeedAlerts(),
     settings: loadStoredSettings() ?? buildSeedSettings(),
+    // Mock mode has one signed-in demo user; a second member makes the
+    // Household page show what it looks like with someone else in it.
+    householdName: "Demo household",
+    members: [
+      { uid: "demo-user", email: "demo@example.com", displayName: "Demo" },
+      { uid: "demo-partner", email: "partner@example.com", displayName: "Sam" },
+    ] as HouseholdMember[],
+    invites: [] as Invite[],
   };
   const latency = (): Promise<void> => delay(120 + Math.random() * 180);
 
@@ -109,6 +119,34 @@ export function createMockAdapter(): FeederServices {
         return true;
       },
     },
+    household: {
+      async name() { await latency(); return store.householdName; },
+      async members() { await latency(); return store.members.map((m) => ({ ...m })); },
+      async invites() { await latency(); return store.invites.map((i) => ({ ...i })); },
+      async invite(email: string) {
+        await latency();
+        const key = email.trim().toLowerCase();
+        // Matches the Firebase adapter: re-inviting the same address returns
+        // the existing invitation rather than issuing a second one.
+        const already = store.invites.find((i) => i.email === key);
+        if (already) return { ...already };
+        const row: Invite = {
+          email: key, hid: "demo-household", invitedBy: "demo-user", createdAt: Date.now(),
+        };
+        store.invites = [...store.invites, row];
+        return { ...row };
+      },
+      async revokeInvite(email: string) {
+        await latency();
+        const before = store.invites.length;
+        store.invites = store.invites.filter((i) => i.email !== email);
+        if (store.invites.length === before) {
+          throw new FeederError("not-found", "That invitation no longer exists.");
+        }
+        return true;
+      },
+    },
+
     settings: {
       async get() {
         await latency();
