@@ -81,9 +81,18 @@ export default function SettingsPage() {
         <SectionHead title="Notifications" subtitle="Choose what raises an alert" />
         <div className="space-y-2">
           {NOTIFICATIONS.map(([k, label]) => (
-            <button key={k} onClick={() => toggle(k)} className="w-full flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 hover:bg-slate-50">
+            <button
+              key={k}
+              onClick={() => toggle(k)}
+              // role=switch + aria-checked is what makes this announce as
+              // "on"/"off" rather than as an unlabelled button whose state is
+              // conveyed only by colour.
+              role="switch"
+              aria-checked={form.notifications[k]}
+              className="w-full flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+            >
               <span className="text-sm font-medium text-slate-800">{label}</span>
-              <span className={`relative w-10 h-6 rounded-full transition-colors ${form.notifications[k] ? "bg-emerald-500" : "bg-slate-200"}`}>
+              <span aria-hidden="true" className={`relative w-10 h-6 rounded-full transition-colors ${form.notifications[k] ? "bg-emerald-500" : "bg-slate-200"}`}>
                 <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${form.notifications[k] ? "left-4" : "left-0.5"}`} />
               </span>
             </button>

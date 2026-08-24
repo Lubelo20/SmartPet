@@ -27,7 +27,7 @@ export function FeedingWorkflow({ cycle }: FeedingWorkflowProps) {
                 <span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors
                   ${isDone ? "bg-emerald-500 border-emerald-500 text-white"
                     : isCurrent ? "bg-amber-500 border-amber-500 text-white animate-pulse"
-                    : "bg-white border-slate-200 text-slate-400"}`}>
+                    : "bg-white border-slate-200 text-slate-500"}`}>
                   {isDone ? <Check size={16} /> : i + 1}
                 </span>
                 {i < WORKFLOW_STEPS.length - 1 && (
@@ -35,8 +35,8 @@ export function FeedingWorkflow({ cycle }: FeedingWorkflowProps) {
                 )}
               </div>
               <div className="pb-6 lg:pb-0 lg:pt-3 lg:pr-4">
-                <p className={`text-sm font-semibold ${isCurrent ? "text-slate-900" : isDone ? "text-slate-700" : "text-slate-400"}`}>{s.label}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{s.detail}</p>
+                <p className={`text-sm font-semibold ${isCurrent ? "text-slate-900" : isDone ? "text-slate-700" : "text-slate-500"}`}>{s.label}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{s.detail}</p>
               </div>
             </li>
           );

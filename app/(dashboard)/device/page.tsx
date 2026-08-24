@@ -40,7 +40,7 @@ export default function DevicePage() {
           <span className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center"><Cpu size={24} /></span>
           <div>
             <p className="text-sm font-bold text-slate-900">ESP32 DevKit v1</p>
-            <p className="text-xs font-mono text-slate-400">{d.id}</p>
+            <p className="text-xs font-mono text-slate-500">{d.id}</p>
           </div>
         </div>
         <div className="mt-5"><DeviceStatusPill online={d.online} lastHeartbeat={d.lastHeartbeat} /></div>
@@ -82,9 +82,9 @@ export default function DevicePage() {
                 <div className="flex-1 rounded-xl border border-slate-200 p-4 text-center">
                   <span className="inline-flex w-10 h-10 rounded-xl bg-slate-100 text-slate-700 items-center justify-center mb-2"><n.icon size={18} /></span>
                   <p className="text-sm font-semibold text-slate-900">{n.t}</p>
-                  <p className="text-xs text-slate-400">{n.s}</p>
+                  <p className="text-xs text-slate-500">{n.s}</p>
                 </div>
-                {i < 3 && <div className="hidden sm:flex items-center text-slate-300"><ChevronRight size={18} /></div>}
+                {i < 3 && <div className="hidden sm:flex items-center text-slate-500"><ChevronRight size={18} /></div>}
               </Fragment>
             ))}
           </div>

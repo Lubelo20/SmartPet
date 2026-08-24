@@ -35,13 +35,20 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased">
+      {/* Keyboard users land here first and can jump past the whole nav. */}
+      <a href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-3 focus:left-3 focus:rounded-xl focus:bg-slate-900 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white">
+        Skip to main content
+      </a>
+
       {/* desktop sidebar */}
-      <aside className="hidden lg:block fixed inset-y-0 left-0 w-64 z-30"><Sidebar unread={unread} /></aside>
+      <aside aria-label="Main navigation" className="hidden lg:block fixed inset-y-0 left-0 w-64 z-30"><Sidebar unread={unread} /></aside>
 
       {/* mobile drawer */}
       {navOpen && (
         <div className="lg:hidden fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-slate-900 opacity-40" onClick={() => setNavOpen(false)} />
+          {/* Decorative: the drawer has its own labelled close button. */}
+          <div className="absolute inset-0 bg-slate-900 opacity-40" onClick={() => setNavOpen(false)} aria-hidden="true" />
           <div className="absolute inset-y-0 left-0 w-72 max-w-full">
             <Sidebar unread={unread} onClose={() => setNavOpen(false)} />
           </div>
@@ -53,13 +60,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           online={t.device.online} lastHeartbeat={t.device.lastHeartbeat}
           onOpenNav={() => setNavOpen(true)} onToggleDemo={() => setShowDemo((v) => !v)} />
 
-        <main className="p-4 sm:p-6 space-y-5 max-w-screen-2xl">
+        <main id="main" tabIndex={-1} className="p-4 sm:p-6 space-y-5 max-w-screen-2xl focus:outline-none">
           {showDemo && (
             <DemoPanel demo={t.demo} cycleActive={t.cycle.active}
               onToggle={() => engine.setDemo(!t.demo)} onScenario={handleScenario} />
           )}
           {children}
-          <footer className="pt-2 pb-6 text-xs text-slate-400">
+          <footer className="pt-2 pb-6 text-xs text-slate-500">
             Frontend running on mock data · data source: <span className="font-mono">{CONFIG.dataSource}</span> · transport: <span className="font-mono">{CONFIG.transport}</span>
           </footer>
         </main>

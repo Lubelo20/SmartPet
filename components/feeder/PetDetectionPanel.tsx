@@ -33,11 +33,11 @@ export function PetDetectionPanel({ detection, pet }: PetDetectionPanelProps) {
       </div>
       <div className="mt-5">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Confidence</span>
+          <span className="text-xs font-semibold uppercase tracking-widest text-slate-500">Confidence</span>
           <span className="text-sm font-bold font-mono text-slate-900">{conf ? `${conf.toFixed(1)}%` : "—"}</span>
         </div>
         <ProgressBar value={conf} tone={conf >= 75 ? "emerald" : conf > 0 ? "rose" : "slate"} />
-        <div className="flex justify-between mt-2 text-xs text-slate-400">
+        <div className="flex justify-between mt-2 text-xs text-slate-500">
           <span>Threshold 75%</span>
           <span>Updated {timeAgo(detection.since)}</span>
         </div>

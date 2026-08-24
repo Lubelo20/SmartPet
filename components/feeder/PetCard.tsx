@@ -19,7 +19,7 @@ export function PetCard({ pet, todayG, onView, onEdit }: PetCardProps) {
             <Badge tone={pet.status === "Active" ? "success" : "neutral"} dot>{pet.status}</Badge>
           </div>
           <p className="text-sm text-slate-500 truncate">{pet.breed}</p>
-          <p className="text-xs font-mono text-slate-400 mt-0.5">{pet.id}</p>
+          <p className="text-xs font-mono text-slate-500 mt-0.5">{pet.id}</p>
         </div>
       </div>
       <dl className="grid grid-cols-2 gap-2 mt-4">

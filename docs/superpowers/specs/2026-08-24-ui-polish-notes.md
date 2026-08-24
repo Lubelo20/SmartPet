@@ -1,7 +1,9 @@
 # UI polish — unfinished design notes
 
 Date: 2026-08-24
-Status: **incomplete.** Two decisions taken, design not written, nothing implemented.
+Status: **accessibility slice implemented 2026-08-25.** Responsive, dark mode and
+motion remain untouched. The open question below was answered: verification is
+browser-driven for now, with axe in CI deferred.
 
 Saved so the survey findings and decisions are not lost. Resume by continuing the
 brainstorming from the open question at the bottom.
@@ -74,3 +76,49 @@ One design constraint already identified regardless of the answer: the feeding c
 updates telemetry every 400 ms. A naive `aria-live="polite"` region over cycle status would
 announce continuously and be unusable. Announcements must be debounced to meaningful state
 transitions — detected, identified, dispensing, complete — not raw telemetry ticks.
+
+
+---
+
+## Accessibility slice — implemented 2026-08-25
+
+Verification: browser-driven, as chosen. No new test dependencies; the stage 1
+no-component-tests decision stands.
+
+**What was fixed**
+
+- `Modal` — `role="dialog"`, `aria-modal`, `aria-labelledby`/`describedby`, focus
+  moved in on open, a real Tab/Shift-Tab trap, and focus restored to the trigger
+  on close.
+- Accessible names on every icon-only control; zero nameless controls remain.
+- Visible `focus-visible` rings on nav links, icon buttons and toggles.
+- Toasts announce: `role="status"`/`aria-live="polite"`, critical as `role="alert"`.
+  Telemetry is deliberately **not** in a live region — it ticks every 400 ms.
+- `<main id="main">` landmark, a skip link, labelled `<aside>`, `aria-current="page"`
+  on the active nav item, `aria-hidden` on decorative scrims and dots.
+- Settings toggles are `role="switch"` with `aria-checked`.
+- History table has a caption and `scope="col"` headers.
+
+**Contrast, measured rather than estimated**
+
+| token | ratio on white | verdict |
+|---|---|---|
+| `text-slate-300` | 1.48:1 | failed, removed |
+| `text-slate-400` | 2.56:1 | failed, removed (39 usages) |
+| `text-slate-500` | 4.76:1 | passes, now the floor |
+| white on `amber-500` | **2.15:1** | failed — the primary button |
+| slate-900 on `amber-500` | 8.31:1 | chosen fix, brand colour kept |
+| slate-900 on `amber-400` | 10.69:1 | hover state |
+
+**Verified in the browser**
+
+Skip link grows from 1×1 to a visible control on focus. The quick-feed dialog
+reports `aria-modal=true` and a resolving label; focus enters it; six Tab presses
+through three controls stay inside and wrap; Escape closes it and returns focus
+to the exact button that opened it. Zero nameless controls on the pages checked.
+
+**Not done**
+
+Responsive (`FeedingHistoryTable` still has no breakpoints and no horizontal
+scroll container), dark mode, motion. A permanent axe guard in CI — this pass is
+a one-off check, so a future edit could regress it silently.

@@ -40,7 +40,7 @@ export default function AlertsPage() {
           {FILTERS.map(([k, label]) => (
             <button key={k} onClick={() => setFilter(k)}
               className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${filter === k ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-              {label} <span className="text-slate-400 font-mono">{counts[k]}</span>
+              {label} <span className="text-slate-500 font-mono">{counts[k]}</span>
             </button>
           ))}
         </div>

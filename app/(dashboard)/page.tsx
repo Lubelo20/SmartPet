@@ -128,7 +128,7 @@ export default function DashboardPage() {
                     <span className="block text-sm font-semibold text-slate-900">{p.name}</span>
                     <span className="block text-xs text-slate-500">{p.portionG} g portion</span>
                   </span>
-                  <Play size={16} className="text-slate-400" />
+                  <Play size={16} className="text-slate-500" />
                 </button>
               ))}
             </div>
@@ -144,12 +144,12 @@ export default function DashboardPage() {
                     <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${tone.dot}`} />
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-slate-900 truncate">{a.title}</p>
-                      <p className="text-xs text-slate-400">{timeAgo(a.timestamp)}</p>
+                      <p className="text-xs text-slate-500">{timeAgo(a.timestamp)}</p>
                     </div>
                   </div>
                 );
               })}
-              {alerts.length === 0 && <p className="text-sm text-slate-400">Nothing to report.</p>}
+              {alerts.length === 0 && <p className="text-sm text-slate-500">Nothing to report.</p>}
             </div>
           </Card>
         </div>

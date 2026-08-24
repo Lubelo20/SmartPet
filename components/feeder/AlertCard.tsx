@@ -21,7 +21,7 @@ export function AlertCard({ alert, onRead }: AlertCardProps) {
           {!alert.read && <span className="w-2 h-2 rounded-full bg-amber-500" />}
         </div>
         <p className="text-sm text-slate-500 mt-1">{alert.message}</p>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-slate-400">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
           <span className="inline-flex items-center gap-1"><Clock size={12} /> {timeAgo(alert.timestamp)}</span>
           <span className="inline-flex items-center gap-1"><Cpu size={12} /> {alert.source}</span>
           <span>{alert.type}</span>

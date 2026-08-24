@@ -98,7 +98,7 @@ export default function FeedingPage() {
         <Card className="p-5">
           <SectionHead title="Hopper" subtitle="Remaining dry food" />
           <div className="flex items-end gap-4">
-            <div className="text-4xl font-bold font-mono text-slate-900">{Math.round(t.hopper.grams)}<span className="text-base text-slate-400 ml-1">g</span></div>
+            <div className="text-4xl font-bold font-mono text-slate-900">{Math.round(t.hopper.grams)}<span className="text-base text-slate-500 ml-1">g</span></div>
             <div className="flex-1 pb-2"><ProgressBar value={(t.hopper.grams / t.hopper.capacity) * 100} tone={t.hopper.grams / t.hopper.capacity < 0.2 ? "rose" : "emerald"} /></div>
           </div>
           <p className="text-sm text-slate-500 mt-3">

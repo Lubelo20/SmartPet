@@ -79,9 +79,9 @@ export function CameraPreview({ detection, pet, online, compact = false }: Camer
           <span className={`w-1.5 h-1.5 rounded-full ${online ? "bg-rose-500 animate-pulse" : "bg-slate-500"}`} />
           {online ? "LIVE" : "NO SIGNAL"}
         </span>
-        <span className="rounded-md bg-slate-900/70 px-2 py-1 text-xs font-mono text-slate-300">CAM-01 · 640×480</span>
+        <span className="rounded-md bg-slate-900/70 px-2 py-1 text-xs font-mono text-slate-500">CAM-01 · 640×480</span>
       </div>
-      <div className="absolute top-3 right-3 rounded-md bg-slate-900/70 px-2 py-1 text-xs font-mono text-slate-300" suppressHydrationWarning>
+      <div className="absolute top-3 right-3 rounded-md bg-slate-900/70 px-2 py-1 text-xs font-mono text-slate-500" suppressHydrationWarning>
         {new Date().toLocaleTimeString()}
       </div>
       {!compact && (
@@ -89,12 +89,12 @@ export function CameraPreview({ detection, pet, online, compact = false }: Camer
           <span className="rounded-lg bg-slate-900/70 px-3 py-1.5 text-xs font-medium text-slate-200">
             {online ? (active ? "Inference running on frame" : "Waiting for motion") : "Camera unreachable"}
           </span>
-          <span className="hidden sm:block rounded-lg bg-slate-900/70 px-3 py-1.5 text-xs font-mono text-slate-400">
+          <span className="hidden sm:block rounded-lg bg-slate-900/70 px-3 py-1.5 text-xs font-mono text-slate-500">
             ESP32-CAM stream slot
           </span>
         </div>
       )}
-      {!online && <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center text-sm font-semibold text-slate-300">Camera offline</div>}
+      {!online && <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center text-sm font-semibold text-slate-500">Camera offline</div>}
     </div>
   );
 }

@@ -26,14 +26,14 @@ export function SensorCard({ icon: Icon, name, part, status, tone, primary, unit
           <span className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center"><Icon size={18} /></span>
           <div>
             <p className="text-sm font-bold text-slate-900">{name}</p>
-            <p className="text-xs font-mono text-slate-400">{part}</p>
+            <p className="text-xs font-mono text-slate-500">{part}</p>
           </div>
         </div>
         <Badge tone={tone} dot>{status}</Badge>
       </div>
       <div className="mt-4 flex items-baseline gap-1.5">
         <span className="text-3xl font-bold font-mono tracking-tight text-slate-900">{primary}</span>
-        {unit && <span className="text-sm text-slate-400 font-medium">{unit}</span>}
+        {unit && <span className="text-sm text-slate-500 font-medium">{unit}</span>}
       </div>
       {spark && spark.length > 3 && (
         <div style={{ height: 56 }} className="mt-3 -mx-1">

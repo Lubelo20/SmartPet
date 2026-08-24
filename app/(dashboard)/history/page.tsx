@@ -74,7 +74,7 @@ export default function HistoryPage() {
         <Card>
           <div className="p-5 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center gap-3">
             <div className="relative flex-1">
-              <Search size={16} className="absolute left-3 top-3 text-slate-400" />
+              <Search size={16} className="absolute left-3 top-3 text-slate-500" />
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search pet, status or date"
                 className={`${inputCls} pl-9`} />
             </div>

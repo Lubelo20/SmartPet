@@ -91,7 +91,7 @@ export default function HouseholdPage() {
           </span>
           <Button type="submit" disabled={busy || !email.trim()} icon={MailPlus}>Send invite</Button>
         </form>
-        <p className="text-xs text-slate-400 mt-2">
+        <p className="text-xs text-slate-500 mt-2">
           They accept the first time they sign in with that address.
         </p>
       </Card>

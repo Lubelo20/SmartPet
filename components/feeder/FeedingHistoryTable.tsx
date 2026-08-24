@@ -13,10 +13,14 @@ export function FeedingHistoryTable({ rows, pets, compact = false }: FeedingHist
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
+        <caption className="sr-only">
+          Feeding history: date, time, pet, target and actual portion, status
+          {compact ? "" : ", confidence and trigger"}.
+        </caption>
         <thead>
           <tr className="text-left border-b border-slate-100">
             {["Date", "Time", "Pet", "Target", "Actual", "Status", !compact && "Confidence", !compact && "Trigger"].filter((h): h is string => Boolean(h)).map((h) => (
-              <th key={h} className={`px-5 py-3 text-xs font-semibold uppercase tracking-widest text-slate-400 ${["Target", "Actual", "Confidence"].includes(h) ? "text-right" : ""}`}>{h}</th>
+              <th key={h} scope="col" className={`px-5 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 ${["Target", "Actual", "Confidence"].includes(h) ? "text-right" : ""}`}>{h}</th>
             ))}
           </tr>
         </thead>

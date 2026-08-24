@@ -52,7 +52,7 @@ export default function PetsPage() {
               <PetAvatar pet={pet} size={96} />
               <h2 className="text-xl font-bold text-slate-900 mt-4">{pet.name}</h2>
               <p className="text-sm text-slate-500">{pet.breed}</p>
-              <p className="text-xs font-mono text-slate-400 mt-1">{pet.id}</p>
+              <p className="text-xs font-mono text-slate-500 mt-1">{pet.id}</p>
               <Badge tone={pet.status === "Active" ? "success" : "neutral"} dot className="mt-3">{pet.status}</Badge>
             </div>
             <dl className="grid grid-cols-2 gap-2 mt-6">
@@ -81,7 +81,7 @@ export default function PetsPage() {
                     <Badge tone={s.enabled ? "success" : "neutral"} className="mt-2">{s.enabled ? "Enabled" : "Paused"}</Badge>
                   </div>
                 ))}
-                {petSchedules.length === 0 && <p className="text-sm text-slate-400 col-span-3">No schedule set for {pet.name} yet.</p>}
+                {petSchedules.length === 0 && <p className="text-sm text-slate-500 col-span-3">No schedule set for {pet.name} yet.</p>}
               </div>
             </Card>
             <Card>

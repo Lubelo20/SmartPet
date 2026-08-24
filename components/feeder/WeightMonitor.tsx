@@ -29,7 +29,7 @@ export function WeightMonitor({ bowl, servo, cycle }: WeightMonitorProps) {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-4xl font-bold font-mono tracking-tight text-slate-900">{Math.round(bowl.grams)}</span>
-            <span className="text-sm font-medium text-slate-400">grams</span>
+            <span className="text-sm font-medium text-slate-500">grams</span>
             {done && <span className="mt-1 text-xs font-semibold text-emerald-600 inline-flex items-center gap-1"><Check size={12} /> Target reached</span>}
           </div>
         </div>
@@ -39,7 +39,7 @@ export function WeightMonitor({ bowl, servo, cycle }: WeightMonitorProps) {
           <ReadoutRow label="Remaining" value={target ? `${Math.max(0, target - bowl.grams).toFixed(1)} g` : "—"} />
           <div className="col-span-3 sm:col-span-1">
             <ProgressBar value={pct} tone={done ? "emerald" : "amber"} height={10} />
-            <p className="text-xs text-slate-400 mt-2">{cycle.message}</p>
+            <p className="text-xs text-slate-500 mt-2">{cycle.message}</p>
           </div>
         </div>
       </div>
