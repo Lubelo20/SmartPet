@@ -92,11 +92,25 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
   // whenever the loaded pets change — before demo autoplay can start a cycle.
   useEffect(() => { engine.setPets(pets); }, [engine, pets]);
 
+  /**
+   * These four writes are optimistic: local state moves first so the UI stays
+   * responsive. The mock adapter cannot meaningfully fail, but Firestore can —
+   * permission denied, offline, a rejected write — and an unhandled rejection
+   * would leave the screen showing a record the server never accepted.
+   *
+   * The local state is deliberately NOT rolled back: a lost write is better
+   * surfaced than silently undone mid-interaction, and a reload reconciles.
+   */
+  const reportWriteFailure = useCallback((title: string, fallback: string) => (e: unknown) => {
+    toast({ tone: "warning", title, message: toFeederError(e, fallback).message });
+  }, [toast]);
+
   const raiseAlert = useCallback((severity: AlertSeverity, type: string, title: string, message: string, source: string) => {
     const row: Alert = { id: uid("AL"), severity, type, title, message, source, timestamp: Date.now(), read: false };
     setAlerts((prev) => [row, ...prev]);
-    void services.alerts.append(row);
-  }, [services]);
+    void services.alerts.append(row)
+      .catch(reportWriteFailure("Alert not saved", "The alert was not recorded."));
+  }, [services, reportWriteFailure]);
 
   // Telemetry events → toasts, history rows and alerts.
   useEffect(() => engine.on((evt: EngineEvent) => {
@@ -109,7 +123,8 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
       case "cycle:complete": {
         const p = pets.find((x) => x.id === evt.record.petId);
         setFeedings((prev) => [evt.record, ...prev]);
-        void services.feedings.append(evt.record);
+        void services.feedings.append(evt.record)
+          .catch(reportWriteFailure("Feeding not recorded", "The feeding record was not saved."));
         if (evt.short) {
           toast({ tone: "critical", title: "Cycle ended short", message: `Only ${evt.record.actualG} g of ${evt.record.targetG} g was dispensed.` });
           raiseAlert("critical", "Feeding error", "Target food weight was not reached",
@@ -206,14 +221,16 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
   }, [services, commandBus, toast]);
 
   const markAlertRead = useCallback((id: string) => {
-    void services.alerts.markRead(id);
+    void services.alerts.markRead(id)
+      .catch(reportWriteFailure("Could not mark as read", "That alert is still unread on the server."));
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, read: true } : a)));
-  }, [services]);
+  }, [services, reportWriteFailure]);
 
   const markAllAlertsRead = useCallback(() => {
-    void services.alerts.markAllRead();
+    void services.alerts.markAllRead()
+      .catch(reportWriteFailure("Could not mark all as read", "Those alerts are still unread on the server."));
     setAlerts((prev) => prev.map((a) => ({ ...a, read: true })));
-  }, [services]);
+  }, [services, reportWriteFailure]);
 
   const saveSettings = useCallback((f: Settings) => {
     setSettings(f);

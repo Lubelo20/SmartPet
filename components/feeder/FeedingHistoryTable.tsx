@@ -35,7 +35,15 @@ export function FeedingHistoryTable({ rows, pets, compact = false }: FeedingHist
                 </td>
                 <td className="px-5 py-3 text-right font-mono text-slate-600">{r.targetG} g</td>
                 <td className="px-5 py-3 text-right font-mono font-semibold text-slate-900">{r.actualG} g</td>
-                <td className="px-5 py-3"><Badge tone={statusTone(r.status)}>{r.status}</Badge></td>
+                <td className="px-5 py-3">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Badge tone={statusTone(r.status)}>{r.status}</Badge>
+                    {/* Records from the simulator say so. When real telemetry
+                        lands they arrive with simulated: false and this simply
+                        stops appearing — no migration, no filtering. */}
+                    {r.simulated && <Badge tone="warning">Demo</Badge>}
+                  </span>
+                </td>
                 {!compact && <td className="px-5 py-3 text-right font-mono text-slate-600">{r.confidence.toFixed(1)}%</td>}
                 {!compact && <td className="px-5 py-3 text-slate-500">{r.trigger}</td>}
               </tr>
