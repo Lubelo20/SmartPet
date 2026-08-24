@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { useTelemetry } from "@/hooks/useTelemetry";
 import { useToast } from "@/hooks/useToast";
 import { CONFIG } from "@/lib/config";
+import { toFeederError } from "@/lib/errors";
 import type {
   Alert, AlertSeverity, EngineEvent, FeedingRecord, NewPet, Pet, Schedule, Settings, Telemetry,
 } from "@/lib/types";
@@ -53,7 +54,7 @@ export function useFeederData(): FeederData {
 }
 
 const errorMessage = (e: unknown, fallback: string): string =>
-  e instanceof Error && e.message ? e.message : fallback;
+  toFeederError(e, fallback).message;
 
 export function FeederDataProvider({ children }: { children: ReactNode }) {
   const { services, telemetry, engine, commandBus } = useServices();

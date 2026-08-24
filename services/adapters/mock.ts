@@ -2,6 +2,7 @@ import type { Alert, FeedingRecord, NewPet, NewSchedule, Pet, Schedule } from "@
 import { buildSeedAlerts, buildSeedFeedings, buildSeedPets, buildSeedSchedules } from "@/lib/seed-data";
 import { dayKey, delay, uid } from "@/lib/utils";
 import type { FeederServices } from "@/services/contract";
+import { FeederError } from "@/lib/errors";
 
 export function createMockAdapter(): FeederServices {
   const store = {
@@ -36,7 +37,7 @@ export function createMockAdapter(): FeederServices {
         await latency();
         store.pets = store.pets.map((p) => (p.id === id ? { ...p, ...patch } : p));
         const next = store.pets.find((p) => p.id === id);
-        if (!next) throw new Error(`Pet ${id} not found`);
+        if (!next) throw new FeederError("not-found", "That pet no longer exists.");
         return next;
       },
       async remove(id: string) {
@@ -70,7 +71,7 @@ export function createMockAdapter(): FeederServices {
         await latency();
         store.schedules = store.schedules.map((s) => (s.id === id ? { ...s, ...patch } : s));
         const next = store.schedules.find((s) => s.id === id);
-        if (!next) throw new Error(`Schedule ${id} not found`);
+        if (!next) throw new FeederError("not-found", "That schedule no longer exists.");
         return next;
       },
       async remove(id: string) {

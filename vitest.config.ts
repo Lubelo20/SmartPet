@@ -8,6 +8,6 @@ export default defineConfig({
     include: ["**/__tests__/**/*.test.ts"],
     // Nested git worktrees hold a full copy of the tree, so the include
     // pattern collects their tests too and every count doubles.
-    exclude: [...configDefaults.exclude, "**/.next/**", "**/.claude/worktrees/**"],
+    exclude: [...configDefaults.exclude, "**/.next/**", "**/.claude/worktrees/**", "**/firestore/**"],
   },
 });

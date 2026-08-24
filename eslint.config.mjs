@@ -18,6 +18,8 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      // Git-ignored scratch worktrees — not this project's source.
+      ".claude/**",
     ],
   },
 ];
