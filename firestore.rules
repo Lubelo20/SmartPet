@@ -1,10 +1,72 @@
 rules_version = '2';
 
-// Deny-all placeholder. The real household-scoped rules land in a later task;
-// until then nothing is readable or writable, which is the safe default and is
-// what firestore/__tests__/harness.test.ts asserts.
+// Household-scoped access. `memberUids` on the household document is the
+// security boundary; every collection nests beneath it, so membership is
+// checked once and inherited by the subcollections.
+//
+// The invite flow is rules-only: there is no privileged server. A user who
+// holds an invite naming their email may add exactly their own uid to that
+// household's memberUids and change nothing else.
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} { allow read, write: if false; }
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function householdData(hid) {
+      return get(/databases/$(database)/documents/households/$(hid)).data;
+    }
+
+    function isMember(hid) {
+      return signedIn() && request.auth.uid in householdData(hid).memberUids;
+    }
+
+    function inviteFor(email) {
+      return get(/databases/$(database)/documents/invites/$(email)).data;
+    }
+
+    function hasInviteTo(hid) {
+      return signedIn()
+        && request.auth.token.email != null
+        && exists(/databases/$(database)/documents/invites/$(request.auth.token.email))
+        && inviteFor(request.auth.token.email).hid == hid;
+    }
+
+    // Adding exactly yourself, changing nothing else.
+    function joiningSelf() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberUids'])
+        && request.resource.data.memberUids == resource.data.memberUids.concat([request.auth.uid])
+        && !(request.auth.uid in resource.data.memberUids);
+    }
+
+    match /households/{hid} {
+      allow get: if isMember(hid);
+      // Per-document evaluation on list: an unconstrained query is rejected
+      // rather than filtered, because some document would fail this rule.
+      allow list: if signedIn() && request.auth.uid in resource.data.memberUids;
+
+      allow create: if signedIn()
+        && request.resource.data.memberUids == [request.auth.uid];
+
+      allow update: if (isMember(hid)
+                        && request.resource.data.memberUids == resource.data.memberUids)
+                    || (hasInviteTo(hid) && joiningSelf());
+
+      allow delete: if false;
+
+      match /{collection}/{docId} {
+        allow read, write: if isMember(hid);
+      }
+    }
+
+    match /invites/{email} {
+      allow get: if signedIn() && request.auth.token.email == email;
+      allow create: if signedIn() && isMember(request.resource.data.hid);
+      allow delete: if signedIn()
+        && (request.auth.token.email == email || isMember(resource.data.hid));
+      allow list, update: if false;
+    }
   }
 }
