@@ -19,9 +19,9 @@ import { Select } from "@/components/ui/Select";
 import { useFeederData } from "@/hooks/useFeederData";
 
 export default function FeedingPage() {
-  const { telemetry: t, pets, schedules, loading, loadError, reload, dispense, stopCycle, toggleSchedule } = useFeederData();
+  const { telemetry: t, pets, schedules, settings, loading, loadError, reload, dispense, stopCycle, toggleSchedule } = useFeederData();
   const [petId, setPetId] = useState(pets[0]?.id || "");
-  const [portion, setPortion] = useState(pets[0]?.portionG || 120);
+  const [portion, setPortion] = useState(pets[0]?.portionG || settings.defaultPortion);
   const [confirm, setConfirm] = useState(false);
   const pet = pets.find((p) => p.id === petId);
   useEffect(() => { if (pet) setPortion(pet.portionG); }, [petId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -102,7 +102,7 @@ export default function FeedingPage() {
             <div className="flex-1 pb-2"><ProgressBar value={(t.hopper.grams / t.hopper.capacity) * 100} tone={t.hopper.grams / t.hopper.capacity < 0.2 ? "rose" : "emerald"} /></div>
           </div>
           <p className="text-sm text-slate-500 mt-3">
-            Roughly {Math.floor(t.hopper.grams / (pet ? pet.portionG : 120))} more portions at the current size.
+            Roughly {Math.floor(t.hopper.grams / (pet ? pet.portionG : settings.defaultPortion))} more portions at the current size.
           </p>
         </Card>
       </div>

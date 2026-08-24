@@ -9,6 +9,7 @@ import type {
   Alert, AlertSeverity, EngineEvent, FeedingRecord, HouseholdMember, Invite, NewPet, Pet,
   Schedule, Settings, Telemetry,
 } from "@/lib/types";
+import { checkDailyLimit } from "@/lib/limits";
 import { shouldToast } from "@/lib/notifications";
 import { buildSeedSettings } from "@/lib/seed-data";
 import { uid } from "@/lib/utils";
@@ -104,6 +105,12 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
   // whenever the loaded pets change — before demo autoplay can start a cycle.
   useEffect(() => { engine.setPets(pets); }, [engine, pets]);
 
+  // Same injection pattern: the engine stands in for the device, and the device
+  // is what refuses to dispense on a low-confidence identification.
+  useEffect(() => {
+    engine.setConfidenceThreshold(settings.confidenceThreshold);
+  }, [engine, settings.confidenceThreshold]);
+
   /**
    * These four writes are optimistic: local state moves first so the UI stays
    * responsive. The mock adapter cannot meaningfully fail, but Firestore can —
@@ -193,12 +200,29 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
 
   const dispense = useCallback(async (pet: Pet, portionG: number) => {
     if (!pet) return;
+
+    // The settings page states plainly that the device refuses commands beyond
+    // the daily total. Nothing enforced it, so this is where that promise is
+    // kept — before the command is sent, not after food has already moved.
+    const limit = checkDailyLimit(pet.id, feedings, portionG, settings.maxDaily, Date.now());
+    if (!limit.allowed) {
+      toast({
+        tone: "critical",
+        title: "Daily limit reached",
+        message: `${pet.name} has had ${limit.alreadyToday} g of a ${limit.limit} g daily maximum. ` +
+          (limit.remaining > 0
+            ? `Only ${limit.remaining} g left today.`
+            : "No more food is allowed today."),
+      });
+      return;
+    }
+
     try {
       await commandBus.send("feeding.start", { petId: pet.id, portionG, trigger: "Manual" });
     } catch (e) {
       toast({ tone: "critical", title: "Feeding failed", message: errorMessage(e, "The feeding command failed.") });
     }
-  }, [commandBus, toast]);
+  }, [commandBus, toast, feedings, settings.maxDaily]);
 
   const stopCycle = useCallback(async () => {
     try { await commandBus.send("feeding.stop"); }

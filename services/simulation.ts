@@ -24,11 +24,21 @@ export class SimulationEngine {
   private phaseEnd = 0;
   private autoNext = Date.now() + 22000;
   private pets: Pet[] = [];
+  /**
+   * Below this, an identification is not trusted and no food is dispensed.
+   * Injected like `pets` because real firmware is where this check belongs —
+   * the engine is the ESP32 stand-in, and the dashboard only mirrors it.
+   */
+  private confidenceThreshold = 0;
 
   constructor(private store: TelemetryStore) {}
 
   setPets(pets: Pet[]): void {
     this.pets = pets;
+  }
+
+  setConfidenceThreshold(pct: number): void {
+    this.confidenceThreshold = pct;
   }
 
   on(fn: Listener): () => void {
@@ -151,6 +161,20 @@ export class SimulationEngine {
         this.phaseEnd = now + 1800;
       } else if (step === 1 && now > this.phaseEnd) {
         const conf = Number((93 + rnd() * 6.4).toFixed(1));
+
+        // The settings page promises the feeder will not dispense below the
+        // configured threshold. Enforce it here, where a real device would:
+        // abandon the cycle rather than feed on an untrusted identification.
+        if (conf < this.confidenceThreshold) {
+          this.store.set({
+            detection: { state: "unknown", petId: null, confidence: conf, since: now },
+            cycle: { ...s.cycle, active: false, step: 0, petId: null, targetG: 0, trigger: null, startedAt: null, message: "Confidence below threshold" },
+            servo: "READY",
+          });
+          this.emit({ kind: "detection:unknown" });
+          return;
+        }
+
         patch.detection = { state: "identified", petId: s.cycle.petId, confidence: conf, since: now };
         patch.cycle = { ...s.cycle, step: 2, message: "Reading assigned portion from profile" };
         this.phaseEnd = now + 1200;

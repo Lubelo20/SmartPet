@@ -128,6 +128,11 @@ touches `getFirebase()`.
 - **Member identity lives on `members/{uid}`**, written by that user on sign-in
   (`ensureMemberRecord`). The household document carries uids only, and only the owning user
   may write their own record, so it cannot be collected centrally.
+- **Every setting must actually govern something.** `maxDaily` is enforced in the
+  `dispense` mutator via `checkDailyLimit` (`lib/limits.ts`), `confidenceThreshold` is
+  injected into `SimulationEngine` the way `setPets` is — real firmware is where that check
+  belongs — and `defaultPortion` feeds the feeding page. A control that promises behaviour
+  and delivers none has been the most common bug in this codebase; do not add another.
 - **Muting a notification silences the toast, never the alert.** `shouldToast`
   (`lib/notifications.ts`) gates the interruption; `raiseAlert` always runs. Losing the
   record of a failed cycle because someone flipped a toggle would be the dangerous choice.

@@ -98,6 +98,38 @@ describe("SimulationEngine", () => {
     engine.stop();
   });
 
+  it("refuses to dispense when identification confidence is below the threshold", () => {
+    // The settings page promises "below this, the feeder will not dispense".
+    // The simulated classifier produces 93 + rnd()*6.4, so it tops out at 99.4;
+    // 100 is above anything it can produce and therefore always refuses.
+    const { store, engine, events } = harness();
+    engine.setConfidenceThreshold(100);
+    engine.startCycle("PET001", 150, "Manual");
+
+    // Long enough to pass the identify step, short enough that the idle loop
+    // has not yet reset detection back to idle.
+    vi.advanceTimersByTime(4_000);
+    expect(store.get().cycle.active).toBe(false);
+    expect(store.get().detection.state).toBe("unknown");
+
+    // Events persist, so they are what proves no food ever moved.
+    vi.advanceTimersByTime(30_000);
+    expect(events.some((e) => e.kind === "detection:unknown")).toBe(true);
+    expect(events.some((e) => e.kind === "cycle:complete")).toBe(false);
+    expect(events.some((e) => e.kind === "detection:identified")).toBe(false);
+    engine.stop();
+  });
+
+  it("dispenses normally when confidence clears the threshold", () => {
+    const { engine, events } = harness();
+    engine.setConfidenceThreshold(75);
+    engine.startCycle("PET001", 150, "Manual");
+    vi.advanceTimersByTime(30_000);
+    expect(events.some((e) => e.kind === "detection:identified")).toBe(true);
+    expect(events.some((e) => e.kind === "cycle:complete")).toBe(true);
+    engine.stop();
+  });
+
   it("applies device and food scenarios", () => {
     const { store, engine, events } = harness();
     engine.scenario("offline");
