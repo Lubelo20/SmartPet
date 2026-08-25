@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useTelemetry } from "@/hooks/useTelemetry";
 import { useToast } from "@/hooks/useToast";
 import { CONFIG } from "@/lib/config";
@@ -11,6 +11,7 @@ import type {
 } from "@/lib/types";
 import { checkDailyLimit, dailyTotalFor } from "@/lib/limits";
 import { shouldToast } from "@/lib/notifications";
+import { formatAlertMessage, shouldSendAlert } from "@/lib/telegram";
 import { buildSeedSettings } from "@/lib/seed-data";
 import { uid } from "@/lib/utils";
 import type { CommandType } from "@/services/commands";
@@ -143,12 +144,39 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
     if (shouldToast(kind, settings.notifications)) toast(input);
   }, [toast, settings.notifications]);
 
+  /**
+   * One message per alert type per cooldown window. A device flapping on and
+   * off would otherwise send a message every few seconds until the owner muted
+   * the bot, and a muted bot reports nothing at all.
+   */
+  const lastSentAt = useRef<Record<string, number>>({});
+  const TELEGRAM_COOLDOWN_MS = 5 * 60 * 1000;
+
+  const sendToTelegram = useCallback((row: Alert) => {
+    if (!shouldSendAlert(row, settings.notifications)) return;
+
+    const now = Date.now();
+    const last = lastSentAt.current[row.type] ?? 0;
+    if (now - last < TELEGRAM_COOLDOWN_MS) return;
+    lastSentAt.current[row.type] = now;
+
+    const pet = pets.find((p) => row.message.includes(p.name)) ?? null;
+    // Fire and forget: a Telegram outage must never break the dashboard, and
+    // the alert itself is already safely recorded by this point.
+    void fetch("/api/telegram", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: formatAlertMessage(row, pet ? pet.name : null) }),
+    }).catch(() => { /* reported nowhere on purpose: see above */ });
+  }, [pets, settings.notifications]);
+
   const raiseAlert = useCallback((severity: AlertSeverity, type: string, title: string, message: string, source: string) => {
     const row: Alert = { id: uid("AL"), severity, type, title, message, source, timestamp: Date.now(), read: false };
     setAlerts((prev) => [row, ...prev]);
     void services.alerts.append(row)
       .catch(reportWriteFailure("Alert not saved", "The alert was not recorded."));
-  }, [services, reportWriteFailure]);
+    sendToTelegram(row);
+  }, [services, reportWriteFailure, sendToTelegram]);
 
   // Telemetry events → toasts, history rows and alerts.
   useEffect(() => engine.on((evt: EngineEvent) => {

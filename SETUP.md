@@ -111,6 +111,32 @@ Authentication → Settings → Authorised domains. Step 4.
 it in `firebase.json`; if you change the Firestore port, `lib/firebase/client.ts`
 must match, and a test asserts that it does.
 
+## Telegram alerts
+
+The dashboard can message you when the feeder raises an alert — low food, a short
+pour, an unknown pet, the device going offline. Optional: with nothing configured
+the app runs exactly as before.
+
+1. Message [@BotFather](https://t.me/BotFather) on Telegram, `/newbot`, and copy the token.
+2. Message your new bot once, then open
+   `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy `message.chat.id`.
+3. Put both in `.env.local` as `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`.
+
+**Neither takes a `NEXT_PUBLIC_` prefix.** That prefix inlines a value into the
+browser bundle; prefixing the token would publish your bot to anyone who opens
+devtools. They are read only by the server route.
+
+Two consequences worth knowing:
+
+- This is the app's **first server route**, so the build is no longer purely
+  static. It needs `next start` or a Node host rather than static file hosting.
+- Alerts are sent by the **browser**, so they only fire while a tab is open. The
+  device-side sender that would work with no browser is specified in the firmware
+  design but not built.
+
+Messages respect the per-user notification toggles in Settings, and are rate
+limited to one per alert type per five minutes so a flapping device cannot spam you.
+
 ## Firmware
 
 The ESP32 firmware lives in [`firmware/`](firmware/) and has its own README. Two things
