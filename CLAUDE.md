@@ -128,6 +128,10 @@ touches `getFirebase()`.
 - **Member identity lives on `members/{uid}`**, written by that user on sign-in
   (`ensureMemberRecord`). The household document carries uids only, and only the owning user
   may write their own record, so it cannot be collected centrally.
+- **`device.config` reaches the engine.** Ping, tare and restart are things an ESP32 does,
+  so `commandBus` routes them to `SimulationEngine` rather than accepting and dropping them.
+  Tare is refused mid-cycle: a load cell tared during a pour would zero food already in the
+  bowl and the cycle would over-dispense chasing a target it had met.
 - **The device fires schedules, not the dashboard.** `docs/ARCHITECTURE.md` defines
   `schedule.update` as "update device RTC schedule", so `SimulationEngine` — the ESP32
   stand-in — owns that behaviour, using the pure helpers in `lib/schedule.ts`. It marks

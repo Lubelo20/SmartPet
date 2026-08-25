@@ -42,13 +42,13 @@ export default function SettingsPage() {
         <SectionHead title="General" subtitle="How the feeder is labelled in this dashboard" />
         <div className="space-y-4">
           <Field label="Device name"><Input value={form.deviceName} onChange={(e) => set("deviceName", e.target.value)} /></Field>
-          <Field label="Time zone">
+          <Field label="Time zone" hint="Shown on records. Schedules run on this browser's local time until the feeder owns a clock.">
             <Select value={form.timezone} onChange={(e) => set("timezone", e.target.value)}>
               <option>Africa/Johannesburg (SAST)</option><option>UTC</option><option>Africa/Nairobi (EAT)</option>
             </Select>
           </Field>
           <Field label="Measurement unit">
-            <Select value={form.unit} onChange={(e) => set("unit", e.target.value)}><option>Grams (g)</option><option>Ounces (oz)</option></Select>
+            <Select value={form.unit} onChange={(e) => set("unit", e.target.value)}><option>Grams (g)</option></Select>
           </Field>
         </div>
       </Card>

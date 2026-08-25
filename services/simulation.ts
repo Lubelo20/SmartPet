@@ -42,6 +42,8 @@ export class SimulationEngine {
   private fired = new Set<string>();
   private maxDaily = 0;
   private dailyTotals: Record<string, number> = {};
+  /** When a simulated reboot finishes. 0 when not restarting. */
+  private restartAt = 0;
 
   constructor(private store: TelemetryStore) {}
 
@@ -73,6 +75,48 @@ export class SimulationEngine {
    * manual feeds, but a scheduled feed never passes through the dashboard, so
    * without this the limit would have a door standing open.
    */
+  /* ---------------- Device maintenance ----------------
+     These are things the ESP32 does, not things the dashboard does. They live
+     here for the same reason schedules do: this class is the device stand-in,
+     and `device.config` is a command sent *to* a device. */
+
+  /**
+   * Zero the bowl reading. Refused during a cycle: a real load cell tared
+   * mid-pour would zero out food already in the bowl, and the cycle would keep
+   * dispensing to reach a target it had already met.
+   */
+  tare(): boolean {
+    const s = this.store.get();
+    if (s.cycle.active) return false;
+    this.store.set({ bowl: { ...s.bowl, grams: 0 } });
+    return true;
+  }
+
+  /** Refresh the heartbeat. An offline board cannot answer. */
+  ping(): boolean {
+    const s = this.store.get();
+    if (!s.device.online) return false;
+    this.store.set({ device: { ...s.device, lastHeartbeat: Date.now() } });
+    return true;
+  }
+
+  /**
+   * Reboot the board: offline now, back in a few seconds with its uptime reset,
+   * because it genuinely restarted. Any running cycle stops — food must not
+   * appear to keep dispensing through a reboot.
+   */
+  restart(): void {
+    const s = this.store.get();
+    if (s.cycle.active) this.stopCycle("Device restarted");
+    this.restartAt = Date.now() + 6000;
+    this.store.set({
+      device: { ...s.device, online: false, mqtt: "reconnecting" },
+      camera: { ...s.camera, online: false },
+      servo: "READY",
+    });
+    this.emit({ kind: "device:offline" });
+  }
+
   setDailyLimit(maxDaily: number, totals: Record<string, number>): void {
     this.maxDaily = maxDaily;
     this.dailyTotals = totals;
@@ -261,6 +305,17 @@ export class SimulationEngine {
           if (!cur.cycle.active) this.store.set({ bowl: { grams: 0, targetG: 0 } });
         }, 5000);
       }
+    }
+
+    // --- finish a simulated reboot --------------------------------------------
+    if (this.restartAt && now >= this.restartAt) {
+      this.restartAt = 0;
+      this.store.set({
+        device: { ...s.device, online: true, mqtt: "connected", lastHeartbeat: now, uptimeS: 0, freeHeapKb: 210 },
+        camera: { ...s.camera, online: true },
+      });
+      this.emit({ kind: "device:online" });
+      return;
     }
 
     // --- scheduled feeding ----------------------------------------------------

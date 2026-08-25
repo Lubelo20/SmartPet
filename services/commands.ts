@@ -26,8 +26,26 @@ export function createCommandBus(telemetry: TelemetryStore, engine: SimulationEn
           return { accepted: true };
         }
         case "portion.update":
-        case "schedule.update":
+        case "schedule.update": {
+          // Stored by the adapter; the engine re-reads them on the next inject.
+          return { accepted: true };
+        }
         case "device.config": {
+          // Maintenance is something the device does, so it goes to the engine
+          // rather than being accepted and quietly dropped.
+          const { action } = payload as { action?: "tare" | "ping" | "restart" };
+          if (action === "tare") {
+            if (!engine.tare()) throw new Error("Cannot tare while a feeding cycle is running.");
+            return { accepted: true };
+          }
+          if (action === "ping") {
+            if (!engine.ping()) throw new Error("The feeder did not answer.");
+            return { accepted: true };
+          }
+          if (action === "restart") {
+            engine.restart();
+            return { accepted: true };
+          }
           return { accepted: true };
         }
         default: {

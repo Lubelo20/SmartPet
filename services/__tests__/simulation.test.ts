@@ -371,3 +371,81 @@ describe("SimulationEngine — scheduled feeding", () => {
     h.engine.stop();
   });
 });
+
+describe("SimulationEngine — device maintenance", () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it("tare zeroes the bowl reading", () => {
+    const { store, engine } = harness();
+    store.set({ bowl: { grams: 137.4, targetG: 0 } });
+    expect(engine.tare()).toBe(true);
+    expect(store.get().bowl.grams).toBe(0);
+    engine.stop();
+  });
+
+  it("tare refuses during a cycle rather than corrupting the measurement", () => {
+    // A real load cell tared mid-pour would zero out food already in the bowl
+    // and the cycle would over-dispense to reach its target.
+    const { store, engine } = harness();
+    engine.setPets([demoPet()]);
+    engine.startCycle("PET009", 20, "Manual");
+    // Far enough in to be dispensing, not so far that the cycle has finished.
+    vi.advanceTimersByTime(5_000);
+    expect(store.get().cycle.active).toBe(true);
+    const before = store.get().bowl.grams;
+    expect(engine.tare()).toBe(false);
+    expect(store.get().bowl.grams).toBe(before);
+    engine.stop();
+  });
+
+  it("ping refreshes the heartbeat", () => {
+    const { store, engine } = harness();
+    store.set({ device: { ...store.get().device, lastHeartbeat: 0 } });
+    engine.ping();
+    expect(store.get().device.lastHeartbeat).toBeGreaterThan(0);
+    engine.stop();
+  });
+
+  it("ping does nothing while the device is offline", () => {
+    const { store, engine } = harness();
+    engine.scenario("offline");
+    store.set({ device: { ...store.get().device, lastHeartbeat: 0 } });
+    expect(engine.ping()).toBe(false);
+    expect(store.get().device.lastHeartbeat).toBe(0);
+    engine.stop();
+  });
+
+  it("restart takes the device offline and brings it back", () => {
+    const { store, engine, events } = harness();
+    expect(store.get().device.online).toBe(true);
+
+    engine.restart();
+    expect(store.get().device.online).toBe(false);
+    expect(events.some((e) => e.kind === "device:offline")).toBe(true);
+
+    vi.advanceTimersByTime(10_000);
+    expect(store.get().device.online).toBe(true);
+    expect(events.some((e) => e.kind === "device:online")).toBe(true);
+    engine.stop();
+  });
+
+  it("restart resets uptime, because the board actually rebooted", () => {
+    const { store, engine } = harness();
+    engine.restart();
+    vi.advanceTimersByTime(10_000);
+    expect(store.get().device.uptimeS).toBeLessThan(60);
+    engine.stop();
+  });
+
+  it("restart stops a running cycle", () => {
+    // Food must not appear to keep dispensing while the board is rebooting.
+    const { store, engine } = harness();
+    engine.setPets([demoPet()]);
+    engine.startCycle("PET009", 20, "Manual");
+    engine.restart();
+    expect(store.get().cycle.active).toBe(false);
+    expect(store.get().servo).toBe("READY");
+    engine.stop();
+  });
+});
