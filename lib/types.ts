@@ -61,7 +61,8 @@ export type EngineEvent =
   | { kind: "device:online" }
   | { kind: "food:low"; grams: number }
   | { kind: "food:refilled" }
-  | { kind: "sensor:error" };
+  | { kind: "sensor:error" }
+  | { kind: "schedule:skipped"; scheduleId: string; petId: string; time: string; reason: "daily-limit" };
 
 /** Describes the feeder itself — shared by every member of the household. */
 export type DeviceSettings = {

@@ -9,7 +9,7 @@ import type {
   Alert, AlertSeverity, EngineEvent, FeedingRecord, HouseholdMember, Invite, NewPet, Pet,
   Schedule, Settings, Telemetry,
 } from "@/lib/types";
-import { checkDailyLimit } from "@/lib/limits";
+import { checkDailyLimit, dailyTotalFor } from "@/lib/limits";
 import { shouldToast } from "@/lib/notifications";
 import { buildSeedSettings } from "@/lib/seed-data";
 import { uid } from "@/lib/utils";
@@ -111,6 +111,16 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
     engine.setConfidenceThreshold(settings.confidenceThreshold);
   }, [engine, settings.confidenceThreshold]);
 
+  // The device holds the schedule and fires it, so the engine needs both the
+  // schedule and enough of today's history to honour the daily maximum.
+  useEffect(() => { engine.setSchedules(schedules); }, [engine, schedules]);
+
+  useEffect(() => {
+    const totals: Record<string, number> = {};
+    for (const p of pets) totals[p.id] = dailyTotalFor(p.id, feedings, Date.now());
+    engine.setDailyLimit(settings.maxDaily, totals);
+  }, [engine, pets, feedings, settings.maxDaily]);
+
   /**
    * These four writes are optimistic: local state moves first so the UI stays
    * responsive. The mock adapter cannot meaningfully fail, but Firestore can —
@@ -190,6 +200,15 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
       case "food:refilled":
         toast({ tone: "success", title: "Hopper refilled", message: "Food level reset to full." });
         break;
+      case "schedule:skipped": {
+        const p = pets.find((x) => x.id === evt.petId);
+        // A skipped meal must never be silent: the pet did not eat.
+        raiseAlert("warning", "Feeding skipped", `The ${evt.time} feeding was skipped`,
+          `${p ? p.name : "The pet"} has already reached the daily maximum, so the scheduled portion was not dispensed.`,
+          "Scheduler");
+        notify("cycle:short", { tone: "warning", title: "Scheduled feeding skipped", message: `${p ? p.name : "A pet"} is at the daily maximum, so the ${evt.time} portion was held back.` });
+        break;
+      }
       case "sensor:error":
         raiseAlert("critical", "Sensor error", "Load cell is not responding", "The HX711 returned no reading for 10 consecutive samples.", "HX711");
         notify("sensor:error", { tone: "critical", title: "Sensor error", message: "The load cell stopped reporting." });

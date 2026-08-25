@@ -1,5 +1,6 @@
 import { CONFIG } from "@/lib/config";
-import type { EngineEvent, FeedingRecord, Pet, Telemetry } from "@/lib/types";
+import { firedKey, isDue } from "@/lib/schedule";
+import type { EngineEvent, FeedingRecord, Pet, Schedule, Telemetry } from "@/lib/types";
 import { clamp, rint, rnd, uid } from "@/lib/utils";
 import type { TelemetryStore } from "@/services/telemetry";
 
@@ -31,6 +32,17 @@ export class SimulationEngine {
    */
   private confidenceThreshold = 0;
 
+  /**
+   * The device holds the schedule and fires it — see docs/ARCHITECTURE.md,
+   * where `schedule.update` means "update device RTC schedule". This engine is
+   * the device stand-in, so it owns that behaviour.
+   */
+  private schedules: Schedule[] = [];
+  /** `${scheduleId}@YYYY-MM-DD` for everything already fired or deliberately skipped. */
+  private fired = new Set<string>();
+  private maxDaily = 0;
+  private dailyTotals: Record<string, number> = {};
+
   constructor(private store: TelemetryStore) {}
 
   setPets(pets: Pet[]): void {
@@ -39,6 +51,31 @@ export class SimulationEngine {
 
   setConfidenceThreshold(pct: number): void {
     this.confidenceThreshold = pct;
+  }
+
+  /**
+   * Anything already past when the schedule arrives is marked as fired rather
+   * than run. Opening the dashboard at 19:00 must not dump five missed meals
+   * into the bowl at once.
+   */
+  setSchedules(schedules: Schedule[]): void {
+    const now = new Date();
+    for (const s of schedules) {
+      const key = firedKey(s, now);
+      const known = this.schedules.some((prev) => prev.id === s.id);
+      if (!known && isDue(s, now)) this.fired.add(key);
+    }
+    this.schedules = schedules;
+  }
+
+  /**
+   * The device honours the daily maximum too. The dashboard enforces it for
+   * manual feeds, but a scheduled feed never passes through the dashboard, so
+   * without this the limit would have a door standing open.
+   */
+  setDailyLimit(maxDaily: number, totals: Record<string, number>): void {
+    this.maxDaily = maxDaily;
+    this.dailyTotals = totals;
   }
 
   on(fn: Listener): () => void {
@@ -223,6 +260,33 @@ export class SimulationEngine {
           const cur = this.store.get();
           if (!cur.cycle.active) this.store.set({ bowl: { grams: 0, targetG: 0 } });
         }, 5000);
+      }
+    }
+
+    // --- scheduled feeding ----------------------------------------------------
+    if (!s.cycle.active && s.device.online) {
+      const at = new Date(now);
+      for (const sch of this.schedules) {
+        const key = firedKey(sch, at);
+        if (this.fired.has(key) || !isDue(sch, at)) continue;
+
+        const pet = this.pets.find((p) => p.id === sch.petId);
+        if (!pet) continue;
+
+        // Claim it before acting, so a refusal is not retried every 400 ms.
+        this.fired.add(key);
+
+        const already = this.dailyTotals[sch.petId] ?? 0;
+        if (this.maxDaily > 0 && already + sch.portionG > this.maxDaily) {
+          this.emit({
+            kind: "schedule:skipped", scheduleId: sch.id, petId: sch.petId,
+            time: sch.time, reason: "daily-limit",
+          });
+          break;
+        }
+
+        this.startCycle(sch.petId, sch.portionG, "Scheduled");
+        break;
       }
     }
 

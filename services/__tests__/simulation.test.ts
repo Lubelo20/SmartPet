@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SimulationEngine } from "@/services/simulation";
 import { TelemetryStore, initialTelemetry } from "@/services/telemetry";
-import type { EngineEvent, Pet } from "@/lib/types";
+import type { EngineEvent, Pet, Schedule } from "@/lib/types";
 
 function harness() {
   const store = new TelemetryStore(initialTelemetry(Date.now()));
@@ -248,5 +248,126 @@ describe("SimulationEngine", () => {
     expect(events.filter((e) => e.kind === "cycle:start")).toHaveLength(startsAtCompletion + 1);
     expect(store.get().cycle.active).toBe(true);
     engine.stop();
+  });
+});
+
+describe("SimulationEngine — scheduled feeding", () => {
+  // The device holds the schedule and fires it, so these assert on the engine
+  // rather than on anything in the dashboard.
+  const sched = (over: Partial<Schedule> = {}): Schedule => ({
+    id: "SCH001", petId: "PET009", time: "06:30", portionG: 20,
+    enabled: true, days: "Daily", ...over,
+  });
+
+  function at(y: number, mo: number, d: number, h: number, mi: number) {
+    vi.setSystemTime(new Date(y, mo, d, h, mi, 0));
+  }
+
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  function scheduled(overrides: Partial<Schedule> = {}) {
+    const h = harness();
+    h.engine.setPets([demoPet()]);
+    h.engine.setSchedules([sched(overrides)]);
+    return h;
+  }
+
+  it("fires a schedule when its time arrives", () => {
+    at(2026, 7, 24, 6, 29); // Monday, one minute early
+    const { engine, events, store } = scheduled();
+    expect(store.get().cycle.active).toBe(false);
+
+    at(2026, 7, 24, 6, 30);
+    vi.advanceTimersByTime(500);
+
+    expect(store.get().cycle.active).toBe(true);
+    expect(store.get().cycle.trigger).toBe("Scheduled");
+    expect(events.some((e) => e.kind === "cycle:start")).toBe(true);
+    engine.stop();
+  });
+
+  it("does not fire a disabled schedule", () => {
+    at(2026, 7, 24, 6, 29);
+    const { engine, store } = scheduled({ enabled: false });
+    at(2026, 7, 24, 6, 31);
+    vi.advanceTimersByTime(500);
+    expect(store.get().cycle.active).toBe(false);
+    engine.stop();
+  });
+
+  it("honours a Weekdays rule on a Saturday", () => {
+    at(2026, 7, 22, 6, 29); // Saturday
+    const { engine, store } = scheduled({ days: "Weekdays" });
+    at(2026, 7, 22, 6, 31);
+    vi.advanceTimersByTime(500);
+    expect(store.get().cycle.active).toBe(false);
+    engine.stop();
+  });
+
+  it("fires only once per day, not on every tick", () => {
+    at(2026, 7, 24, 6, 29);
+    const { engine, events } = scheduled();
+    at(2026, 7, 24, 6, 30);
+    vi.advanceTimersByTime(120_000); // two minutes of 400 ms ticks
+    const starts = events.filter((e) => e.kind === "cycle:start").length;
+    expect(starts).toBe(1);
+    engine.stop();
+  });
+
+  it("does not back-fire a time that had already passed when it loaded", () => {
+    // Opening the dashboard in the evening must not dump the day's missed
+    // meals into the bowl at once.
+    at(2026, 7, 24, 19, 0);
+    const { engine, store } = scheduled();
+    vi.advanceTimersByTime(5_000);
+    expect(store.get().cycle.active).toBe(false);
+    engine.stop();
+  });
+
+  it("skips a scheduled feed that would breach the daily maximum", () => {
+    at(2026, 7, 24, 6, 29);
+    const h = harness();
+    h.engine.setPets([demoPet()]);
+    h.engine.setDailyLimit(100, { PET009: 95 }); // 95 + 20 > 100
+    h.engine.setSchedules([sched()]);
+
+    at(2026, 7, 24, 6, 30);
+    vi.advanceTimersByTime(2_000);
+
+    expect(h.store.get().cycle.active).toBe(false);
+    const skipped = h.events.find((e) => e.kind === "schedule:skipped");
+    expect(skipped).toBeTruthy();
+    expect(h.events.some((e) => e.kind === "cycle:start")).toBe(false);
+    h.engine.stop();
+  });
+
+  it("fires when the daily maximum still has room", () => {
+    at(2026, 7, 24, 6, 29);
+    const h = harness();
+    h.engine.setPets([demoPet()]);
+    h.engine.setDailyLimit(100, { PET009: 40 }); // 40 + 20 <= 100
+    h.engine.setSchedules([sched()]);
+
+    at(2026, 7, 24, 6, 30);
+    vi.advanceTimersByTime(2_000);
+
+    expect(h.store.get().cycle.active).toBe(true);
+    h.engine.stop();
+  });
+
+  it("does not retry a skipped schedule every tick", () => {
+    at(2026, 7, 24, 6, 29);
+    const h = harness();
+    h.engine.setPets([demoPet()]);
+    h.engine.setDailyLimit(100, { PET009: 95 });
+    h.engine.setSchedules([sched()]);
+
+    at(2026, 7, 24, 6, 30);
+    vi.advanceTimersByTime(60_000);
+
+    const skips = h.events.filter((e) => e.kind === "schedule:skipped").length;
+    expect(skips).toBe(1);
+    h.engine.stop();
   });
 });

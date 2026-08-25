@@ -92,8 +92,10 @@ document to keep in sync. Read that file directly for `Pet`, `FeedingRecord`, `S
 3. **TELEMETRY LAYER** (`services/telemetry.ts`, `services/simulation.ts`, `services/commands.ts`):
    - `TelemetryStore` is a tiny pub/sub store holding one object: `device`, `hopper`, `bowl`,
      `distanceCm`, `servo`, `camera`, `detection`, `cycle`, `demo`, `history`.
-   - `SimulationEngine` stands in for the real ESP32 stream. It ticks every 400 ms and runs
-     the feeding-cycle state machine (`cycle.step` 0→5: detected → identified → portion →
+   - `SimulationEngine` stands in for the real ESP32 stream. It also owns the behaviour a
+     real device owns: firing the feeding schedule at its configured times, refusing to
+     dispense below the confidence threshold, and honouring the daily maximum. It ticks
+     every 400 ms and runs the feeding-cycle state machine (`cycle.step` 0→5: detected → identified → portion →
      dispensing → checking → reached), writing only into `TelemetryStore` and emitting events
      via `engine.on`. Replacing it with an MQTT/RTDB subscription must leave the UI untouched;
      keep it in the repo behind Demo Mode so the dashboard can be shown without hardware.

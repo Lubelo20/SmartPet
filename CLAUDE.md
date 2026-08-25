@@ -128,6 +128,12 @@ touches `getFirebase()`.
 - **Member identity lives on `members/{uid}`**, written by that user on sign-in
   (`ensureMemberRecord`). The household document carries uids only, and only the owning user
   may write their own record, so it cannot be collected centrally.
+- **The device fires schedules, not the dashboard.** `docs/ARCHITECTURE.md` defines
+  `schedule.update` as "update device RTC schedule", so `SimulationEngine` — the ESP32
+  stand-in — owns that behaviour, using the pure helpers in `lib/schedule.ts`. It marks
+  already-past times as fired on injection rather than running them, so opening the
+  dashboard in the evening does not dump the day's missed meals into the bowl, and it
+  honours `maxDaily` itself because a scheduled feed never passes through `dispense`.
 - **Every setting must actually govern something.** `maxDaily` is enforced in the
   `dispense` mutator via `checkDailyLimit` (`lib/limits.ts`), `confidenceThreshold` is
   injected into `SimulationEngine` the way `setPets` is — real firmware is where that check
