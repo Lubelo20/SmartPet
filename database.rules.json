@@ -1,0 +1,18 @@
+{
+  "rules": {
+    "devices": {
+      "$deviceId": {
+        ".read": "auth != null",
+        "telemetry": { ".write": "auth != null && auth.uid === root.child('deviceAuth').child($deviceId).child('uid').val()" },
+        "ack":       { ".write": "auth != null && auth.uid === root.child('deviceAuth').child($deviceId).child('uid').val()" },
+        "command":   { ".write": "auth != null" },
+        "schedule":  { ".write": "auth != null" },
+        "config":    { ".write": "auth != null" }
+      }
+    },
+    "deviceAuth": {
+      ".read": "auth != null",
+      ".write": false
+    }
+  }
+}

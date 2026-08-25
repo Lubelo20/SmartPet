@@ -111,6 +111,16 @@ Authentication → Settings → Authorised domains. Step 4.
 it in `firebase.json`; if you change the Firestore port, `lib/firebase/client.ts`
 must match, and a test asserts that it does.
 
+## Firmware
+
+The ESP32 firmware lives in [`firmware/`](firmware/) and has its own README. Two things
+that touch this project rather than the board:
+
+- It signs in as a **dedicated Firebase Auth user of its own** — create one, and record its
+  uid at `deviceAuth/{deviceId}/uid` in RTDB, which is what the database rules check.
+- Deploy the RTDB rules with `npx firebase deploy --only database`. They are separate from
+  the Firestore rules and are not deployed by the Firestore command.
+
 ## Credentials
 
 Firebase config comes from `.env.local`, which is git-ignored and must stay that
