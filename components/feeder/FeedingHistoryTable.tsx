@@ -18,27 +18,27 @@ export function FeedingHistoryTable({ rows, pets, compact = false }: FeedingHist
           {compact ? "" : ", confidence and trigger"}.
         </caption>
         <thead>
-          <tr className="text-left border-b border-slate-100">
+          <tr className="text-left border-b border-line-soft">
             {["Date", "Time", "Pet", "Target", "Actual", "Status", !compact && "Confidence", !compact && "Trigger"].filter((h): h is string => Boolean(h)).map((h) => (
-              <th key={h} scope="col" className={`px-5 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 ${["Target", "Actual", "Confidence"].includes(h) ? "text-right" : ""}`}>{h}</th>
+              <th key={h} scope="col" className={`px-5 py-3 text-xs font-semibold uppercase tracking-widest text-muted ${["Target", "Actual", "Confidence"].includes(h) ? "text-right" : ""}`}>{h}</th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-50">
+        <tbody className="divide-y divide-line-soft">
           {rows.map((r) => {
             const p = pets.find((x) => x.id === r.petId);
             return (
-              <tr key={r.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-5 py-3 text-slate-600 whitespace-nowrap">{fmtDate(r.timestamp)}</td>
-                <td className="px-5 py-3 font-mono text-slate-900">{fmtTime(r.timestamp)}</td>
+              <tr key={r.id} className="hover:bg-surface-2 transition-colors">
+                <td className="px-5 py-3 text-ink-2 whitespace-nowrap">{fmtDate(r.timestamp)}</td>
+                <td className="px-5 py-3 font-mono text-ink">{fmtTime(r.timestamp)}</td>
                 <td className="px-5 py-3">
                   <span className="inline-flex items-center gap-2">
                     <PetAvatar pet={p ?? null} size={26} />
-                    <span className="font-medium text-slate-900">{p ? p.name : "Unknown"}</span>
+                    <span className="font-medium text-ink">{p ? p.name : "Unknown"}</span>
                   </span>
                 </td>
-                <td className="px-5 py-3 text-right font-mono text-slate-600">{r.targetG} g</td>
-                <td className="px-5 py-3 text-right font-mono font-semibold text-slate-900">{r.actualG} g</td>
+                <td className="px-5 py-3 text-right font-mono text-ink-2">{r.targetG} g</td>
+                <td className="px-5 py-3 text-right font-mono font-semibold text-ink">{r.actualG} g</td>
                 <td className="px-5 py-3">
                   <span className="inline-flex items-center gap-1.5">
                     <Badge tone={statusTone(r.status)}>{r.status}</Badge>
@@ -48,8 +48,8 @@ export function FeedingHistoryTable({ rows, pets, compact = false }: FeedingHist
                     {r.simulated && <Badge tone="warning">Demo</Badge>}
                   </span>
                 </td>
-                {!compact && <td className="px-5 py-3 text-right font-mono text-slate-600">{r.confidence.toFixed(1)}%</td>}
-                {!compact && <td className="px-5 py-3 text-slate-500">{r.trigger}</td>}
+                {!compact && <td className="px-5 py-3 text-right font-mono text-ink-2">{r.confidence.toFixed(1)}%</td>}
+                {!compact && <td className="px-5 py-3 text-muted">{r.trigger}</td>}
               </tr>
             );
           })}

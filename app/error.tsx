@@ -43,7 +43,7 @@ export default function AppError({
           </Link>
         </div>
         {error.digest && (
-          <p className="pb-5 text-center text-xs text-slate-500">
+          <p className="pb-5 text-center text-xs text-muted">
             Reference <span className="font-mono">{error.digest}</span>
           </p>
         )}

@@ -55,7 +55,7 @@ export default function FeedingPage() {
           <div className="flex flex-wrap gap-2 mt-3">
             {[30, 60, 90, 120, 150, 200].map((g) => (
               <button key={g} onClick={() => setPortion(g)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${portion === g ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"}`}>
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${portion === g ? "bg-inverse text-inverse-ink border-inverse" : "bg-surface text-ink-2 border-line hover:border-line"}`}>
                 {g} g
               </button>
             ))}
@@ -80,15 +80,15 @@ export default function FeedingPage() {
             {[...schedules].sort((a, b) => a.time.localeCompare(b.time)).map((s) => {
               const p = pets.find((x) => x.id === s.petId);
               return (
-                <div key={s.id} className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2.5">
-                  <span className="text-sm font-bold font-mono text-slate-900 w-12">{s.time}</span>
+                <div key={s.id} className="flex items-center gap-3 rounded-xl border border-line px-3 py-2.5">
+                  <span className="text-sm font-bold font-mono text-ink w-12">{s.time}</span>
                   <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-medium text-slate-900 truncate">{p ? p.name : "Unassigned"}</span>
-                    <span className="block text-xs text-slate-500">{s.portionG} g · {s.days}</span>
+                    <span className="block text-sm font-medium text-ink truncate">{p ? p.name : "Unassigned"}</span>
+                    <span className="block text-xs text-muted">{s.portionG} g · {s.days}</span>
                   </span>
                   <button onClick={() => void toggleSchedule(s)}
-                    className={`relative w-10 h-6 rounded-full transition-colors ${s.enabled ? "bg-emerald-500" : "bg-slate-200"}`}>
-                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${s.enabled ? "left-4" : "left-0.5"}`} />
+                    className={`relative w-10 h-6 rounded-full transition-colors ${s.enabled ? "bg-emerald-500" : "bg-line"}`}>
+                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-surface shadow transition-all ${s.enabled ? "left-4" : "left-0.5"}`} />
                   </button>
                 </div>
               );
@@ -98,10 +98,10 @@ export default function FeedingPage() {
         <Card className="p-5">
           <SectionHead title="Hopper" subtitle="Remaining dry food" />
           <div className="flex items-end gap-4">
-            <div className="text-4xl font-bold font-mono text-slate-900">{Math.round(t.hopper.grams)}<span className="text-base text-slate-500 ml-1">g</span></div>
+            <div className="text-4xl font-bold font-mono text-ink">{Math.round(t.hopper.grams)}<span className="text-base text-muted ml-1">g</span></div>
             <div className="flex-1 pb-2"><ProgressBar value={(t.hopper.grams / t.hopper.capacity) * 100} tone={t.hopper.grams / t.hopper.capacity < 0.2 ? "rose" : "emerald"} /></div>
           </div>
-          <p className="text-sm text-slate-500 mt-3">
+          <p className="text-sm text-muted mt-3">
             Roughly {Math.floor(t.hopper.grams / (pet ? pet.portionG : settings.defaultPortion))} more portions at the current size.
           </p>
         </Card>
@@ -114,11 +114,11 @@ export default function FeedingPage() {
           <Button variant="ghost" onClick={() => setConfirm(false)}>Cancel</Button>
           <Button onClick={() => { setConfirm(false); if (pet) void dispense(pet, portion); }}>Confirm feeding</Button>
         </>}>
-        <div className="flex items-center gap-4 rounded-xl bg-slate-50 border border-slate-100 p-4">
+        <div className="flex items-center gap-4 rounded-xl bg-canvas border border-line-soft p-4">
           <PetAvatar pet={pet ?? null} size={44} />
           <div>
-            <p className="text-sm font-semibold text-slate-900">{pet ? pet.name : ""}</p>
-            <p className="text-sm text-slate-500">{pet ? pet.breed : ""} · target {portion} g</p>
+            <p className="text-sm font-semibold text-ink">{pet ? pet.name : ""}</p>
+            <p className="text-sm text-muted">{pet ? pet.breed : ""} · target {portion} g</p>
           </div>
         </div>
       </Modal>

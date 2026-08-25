@@ -27,17 +27,17 @@ export function PetDetectionPanel({ detection, pet }: PetDetectionPanelProps) {
       <div className="mt-4 flex items-center gap-4">
         <PetAvatar pet={detection.state === "identified" ? (pet ?? null) : null} size={52} />
         <div className="min-w-0">
-          <p className="text-lg font-bold text-slate-900 tracking-tight truncate">{s.title}</p>
-          <p className="text-sm text-slate-500 truncate">{s.sub}</p>
+          <p className="text-lg font-bold text-ink tracking-tight truncate">{s.title}</p>
+          <p className="text-sm text-muted truncate">{s.sub}</p>
         </div>
       </div>
       <div className="mt-5">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold uppercase tracking-widest text-slate-500">Confidence</span>
-          <span className="text-sm font-bold font-mono text-slate-900">{conf ? `${conf.toFixed(1)}%` : "—"}</span>
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted">Confidence</span>
+          <span className="text-sm font-bold font-mono text-ink">{conf ? `${conf.toFixed(1)}%` : "—"}</span>
         </div>
         <ProgressBar value={conf} tone={conf >= 75 ? "emerald" : conf > 0 ? "rose" : "slate"} />
-        <div className="flex justify-between mt-2 text-xs text-slate-500">
+        <div className="flex justify-between mt-2 text-xs text-muted">
           <span>Threshold 75%</span>
           <span>Updated {timeAgo(detection.since)}</span>
         </div>

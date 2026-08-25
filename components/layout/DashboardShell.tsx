@@ -34,10 +34,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const unread = alerts.filter((a) => !a.read).length;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased">
+    <div className="min-h-screen bg-canvas text-ink font-sans antialiased">
       {/* Keyboard users land here first and can jump past the whole nav. */}
       <a href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-3 focus:left-3 focus:rounded-xl focus:bg-slate-900 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white">
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-3 focus:left-3 focus:rounded-xl focus:bg-inverse focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-inverse-ink">
         Skip to main content
       </a>
 
@@ -48,7 +48,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       {navOpen && (
         <div className="lg:hidden fixed inset-0 z-40">
           {/* Decorative: the drawer has its own labelled close button. */}
-          <div className="absolute inset-0 bg-slate-900 opacity-40" onClick={() => setNavOpen(false)} aria-hidden="true" />
+          <div className="absolute inset-0 bg-inverse opacity-40" onClick={() => setNavOpen(false)} aria-hidden="true" />
           <div className="absolute inset-y-0 left-0 w-72 max-w-full">
             <Sidebar unread={unread} onClose={() => setNavOpen(false)} />
           </div>
@@ -66,7 +66,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               onToggle={() => engine.setDemo(!t.demo)} onScenario={handleScenario} />
           )}
           {children}
-          <footer className="pt-2 pb-6 text-xs text-slate-500">
+          <footer className="pt-2 pb-6 text-xs text-muted">
             Frontend running on mock data · data source: <span className="font-mono">{CONFIG.dataSource}</span> · transport: <span className="font-mono">{CONFIG.transport}</span>
           </footer>
         </main>
@@ -81,11 +81,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           <Button onClick={confirmFeed}>Confirm feeding</Button>
         </>}>
         {pendingFeed && (
-          <div className="flex items-center gap-4 rounded-xl bg-slate-50 border border-slate-100 p-4">
+          <div className="flex items-center gap-4 rounded-xl bg-canvas border border-line-soft p-4">
             <PetAvatar pet={pendingFeed.pet} size={44} />
             <div>
-              <p className="text-sm font-semibold text-slate-900">{pendingFeed.pet.name}</p>
-              <p className="text-sm text-slate-500">{pendingFeed.pet.breed} · target {pendingFeed.portionG} g</p>
+              <p className="text-sm font-semibold text-ink">{pendingFeed.pet.name}</p>
+              <p className="text-sm text-muted">{pendingFeed.pet.breed} · target {pendingFeed.portionG} g</p>
             </div>
           </div>
         )}

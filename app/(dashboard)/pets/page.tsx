@@ -43,16 +43,16 @@ export default function PetsPage() {
     const petSchedules = schedules.filter((s) => s.petId === pet.id).sort((a, b) => a.time.localeCompare(b.time));
     return (
       <div className="space-y-5">
-        <button onClick={() => setSelected(null)} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-900">
+        <button onClick={() => setSelected(null)} className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
           <ChevronLeft size={16} /> All pets
         </button>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <Card className="p-6 lg:col-span-1">
             <div className="flex flex-col items-center text-center">
               <PetAvatar pet={pet} size={96} />
-              <h2 className="text-xl font-bold text-slate-900 mt-4">{pet.name}</h2>
-              <p className="text-sm text-slate-500">{pet.breed}</p>
-              <p className="text-xs font-mono text-slate-500 mt-1">{pet.id}</p>
+              <h2 className="text-xl font-bold text-ink mt-4">{pet.name}</h2>
+              <p className="text-sm text-muted">{pet.breed}</p>
+              <p className="text-xs font-mono text-muted mt-1">{pet.id}</p>
               <Badge tone={pet.status === "Active" ? "success" : "neutral"} dot className="mt-3">{pet.status}</Badge>
             </div>
             <dl className="grid grid-cols-2 gap-2 mt-6">
@@ -63,7 +63,7 @@ export default function PetsPage() {
               <MiniStat label="Total consumed" value={`${(total / 1000).toFixed(1)} kg`} />
               <MiniStat label="Enrolled" value={fmtShort(new Date(pet.enrolledAt))} />
             </dl>
-            {pet.note && <p className="text-sm text-slate-500 mt-4 rounded-xl bg-slate-50 border border-slate-100 p-3">{pet.note}</p>}
+            {pet.note && <p className="text-sm text-muted mt-4 rounded-xl bg-canvas border border-line-soft p-3">{pet.note}</p>}
             <div className="flex gap-2 mt-5">
               <Button variant="dark" size="sm" icon={Pencil} className="flex-1" onClick={() => setEditing(pet)}>Edit profile</Button>
               <Button variant="danger" size="sm" icon={Trash2} onClick={() => setConfirmDelete(pet)}>Delete</Button>
@@ -75,13 +75,13 @@ export default function PetsPage() {
               <SectionHead title="Feeding schedule" subtitle="Times the feeder will dispense for this pet" />
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {petSchedules.map((s) => (
-                  <div key={s.id} className={`rounded-xl border px-3 py-3 ${s.enabled ? "border-slate-200 bg-white" : "border-slate-100 bg-slate-50"}`}>
-                    <p className="text-lg font-bold font-mono text-slate-900">{s.time}</p>
-                    <p className="text-xs text-slate-500">{s.portionG} g · {s.days}</p>
+                  <div key={s.id} className={`rounded-xl border px-3 py-3 ${s.enabled ? "border-line bg-surface" : "border-line-soft bg-canvas"}`}>
+                    <p className="text-lg font-bold font-mono text-ink">{s.time}</p>
+                    <p className="text-xs text-muted">{s.portionG} g · {s.days}</p>
                     <Badge tone={s.enabled ? "success" : "neutral"} className="mt-2">{s.enabled ? "Enabled" : "Paused"}</Badge>
                   </div>
                 ))}
-                {petSchedules.length === 0 && <p className="text-sm text-slate-500 col-span-3">No schedule set for {pet.name} yet.</p>}
+                {petSchedules.length === 0 && <p className="text-sm text-muted col-span-3">No schedule set for {pet.name} yet.</p>}
               </div>
             </Card>
             <Card>
@@ -106,7 +106,7 @@ export default function PetsPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-4">
-        <p className="text-sm text-slate-500">{pets.length} enrolled profiles. The classifier is trained on these pets only.</p>
+        <p className="text-sm text-muted">{pets.length} enrolled profiles. The classifier is trained on these pets only.</p>
         <Button icon={Plus} onClick={() => setEditing("new")}>Add pet</Button>
       </div>
       {pets.length === 0 ? (

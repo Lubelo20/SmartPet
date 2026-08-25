@@ -59,8 +59,8 @@ export default function JoinPage() {
         <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 mb-4">
           <MailOpen size={22} />
         </div>
-        <p className="text-sm font-semibold text-slate-900">You have been invited</p>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm font-semibold text-ink">You have been invited</p>
+        <p className="text-sm text-muted mt-1">
           Someone has invited you to share their feeder. Accepting adds you to their household.
         </p>
       </div>

@@ -86,16 +86,16 @@ export default function SignInPage() {
       </form>
 
       <div className="flex items-center gap-3 my-4">
-        <span className="h-px flex-1 bg-slate-200" />
-        <span className="text-xs text-slate-500">or</span>
-        <span className="h-px flex-1 bg-slate-200" />
+        <span className="h-px flex-1 bg-line" />
+        <span className="text-xs text-muted">or</span>
+        <span className="h-px flex-1 bg-line" />
       </div>
 
       <Button variant="ghost" size="lg" disabled={busy} className="w-full" onClick={onGoogle}>
         Continue with Google
       </Button>
 
-      <p className="text-sm text-slate-500 text-center mt-5">
+      <p className="text-sm text-muted text-center mt-5">
         {mode === "sign-in" ? "No account yet?" : "Already have an account?"}{" "}
         <button
           type="button"

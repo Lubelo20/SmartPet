@@ -25,16 +25,16 @@ export function Sidebar({ unread, onClose }: SidebarProps) {
   // Mock mode runs a fixed fake session, so signing out of it would do nothing.
   const canSignOut = CONFIG.dataSource !== "mock";
   return (
-    <div className="flex flex-col h-full bg-white border-r border-slate-200">
-      <div className="flex items-center gap-3 px-5 h-16 border-b border-slate-100">
-        <span className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center"><PawPrint size={18} /></span>
+    <div className="flex flex-col h-full bg-surface border-r border-line">
+      <div className="flex items-center gap-3 px-5 h-16 border-b border-line-soft">
+        <span className="w-9 h-9 rounded-xl bg-inverse text-inverse-ink flex items-center justify-center"><PawPrint size={18} /></span>
         <div className="min-w-0">
-          <p className="text-sm font-bold text-slate-900 leading-tight truncate">Smart Pet Feeder</p>
-          <p className="text-xs text-slate-500 font-mono truncate">{CONFIG.deviceId}</p>
+          <p className="text-sm font-bold text-ink leading-tight truncate">Smart Pet Feeder</p>
+          <p className="text-xs text-muted font-mono truncate">{CONFIG.deviceId}</p>
         </div>
         {onClose && (
           <button onClick={onClose} aria-label="Close navigation"
-            className="ml-auto p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 lg:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400">
+            className="ml-auto p-1.5 rounded-lg text-muted hover:bg-surface-2 lg:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400">
             <X size={18} />
           </button>
         )}
@@ -49,11 +49,11 @@ export function Sidebar({ unread, onClose }: SidebarProps) {
               // alone conveys that only to people who can see it.
               aria-current={active ? "page" : undefined}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400
-                ${active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"}`}>
+                ${active ? "bg-inverse text-inverse-ink" : "text-ink-2 hover:bg-surface-2 hover:text-ink"}`}>
               <n.icon size={18} strokeWidth={2} aria-hidden="true" />
               <span className="flex-1 text-left">{n.label}</span>
               {n.key === "alerts" && unread > 0 && (
-                <span className={`px-1.5 py-0.5 rounded-md text-xs font-bold ${active ? "bg-white text-slate-900" : "bg-amber-100 text-amber-700"}`}>
+                <span className={`px-1.5 py-0.5 rounded-md text-xs font-bold ${active ? "bg-surface text-ink" : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-200"}`}>
                   <span className="sr-only">, </span>{unread}<span className="sr-only"> unread</span>
                 </span>
               )}
@@ -62,27 +62,27 @@ export function Sidebar({ unread, onClose }: SidebarProps) {
         })}
       </nav>
 
-      <div className="p-3 border-t border-slate-100">
+      <div className="p-3 border-t border-line-soft">
         <div className="flex items-center gap-3 px-2 py-2 rounded-xl">
-          <span className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm">
+          <span className="w-9 h-9 rounded-xl bg-surface-2 text-ink-2 flex items-center justify-center font-bold text-sm">
             {initials(user?.displayName ?? null, user?.email ?? null)}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-slate-900 truncate">
+            <p className="text-sm font-semibold text-ink truncate">
               {user?.displayName || user?.email || "Signed in"}
             </p>
-            <p className="text-xs text-slate-500 truncate">
+            <p className="text-xs text-muted truncate">
               {user?.displayName && user?.email ? user.email : "Feeder owner"}
             </p>
           </div>
         </div>
         <div className="mt-1 space-y-1">
-          <Link href="/settings" onClick={onClose} className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400">
+          <Link href="/settings" onClick={onClose} className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-ink-2 hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400">
             <Settings size={16} /> Settings
           </Link>
           {canSignOut && (
             <button onClick={() => void signOutNow()}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400">
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-ink-2 hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400">
               <LogOut size={16} /> Log out
             </button>
           )}

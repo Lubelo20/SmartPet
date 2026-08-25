@@ -72,7 +72,7 @@ export function Modal({ open, title, description, onClose, children, footer, wid
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6">
       {/* Decorative: closing is also on Escape and the labelled close button,
           so this does not need to be a keyboard target of its own. */}
-      <div className="absolute inset-0 bg-slate-900 opacity-40" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 bg-inverse opacity-40" onClick={onClose} aria-hidden="true" />
       <div
         ref={panelRef}
         role="dialog"
@@ -80,24 +80,24 @@ export function Modal({ open, title, description, onClose, children, footer, wid
         aria-labelledby={titleId}
         aria-describedby={description ? descId : undefined}
         tabIndex={-1}
-        className="relative w-full bg-white rounded-t-2xl sm:rounded-2xl shadow-xl border border-slate-200 max-h-full overflow-y-auto focus:outline-none"
+        className="relative w-full bg-surface rounded-t-2xl sm:rounded-2xl shadow-xl border border-line max-h-full overflow-y-auto focus:outline-none"
         style={{ maxWidth: width }}
       >
-        <div className="flex items-start justify-between gap-4 p-5 border-b border-slate-100">
+        <div className="flex items-start justify-between gap-4 p-5 border-b border-line-soft">
           <div>
-            <h3 id={titleId} className="text-base font-semibold text-slate-900">{title}</h3>
-            {description && <p id={descId} className="text-sm text-slate-500 mt-1">{description}</p>}
+            <h3 id={titleId} className="text-base font-semibold text-ink">{title}</h3>
+            {description && <p id={descId} className="text-sm text-muted mt-1">{description}</p>}
           </div>
           <button
             onClick={onClose}
             aria-label="Close dialog"
-            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+            className="p-1.5 rounded-lg text-muted hover:bg-surface-2 hover:text-ink-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
           >
             <X size={18} />
           </button>
         </div>
         {children && <div className="p-5">{children}</div>}
-        {footer && <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-5 border-t border-slate-100 bg-slate-50 rounded-b-2xl">{footer}</div>}
+        {footer && <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-5 border-t border-line-soft bg-canvas rounded-b-2xl">{footer}</div>}
       </div>
     </div>
   );

@@ -37,17 +37,17 @@ export default function DevicePage() {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
       <Card className="p-6 lg:col-span-1">
         <div className="flex items-center gap-4">
-          <span className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center"><Cpu size={24} /></span>
+          <span className="w-14 h-14 rounded-2xl bg-inverse text-inverse-ink flex items-center justify-center"><Cpu size={24} /></span>
           <div>
-            <p className="text-sm font-bold text-slate-900">ESP32 DevKit v1</p>
-            <p className="text-xs font-mono text-slate-500">{d.id}</p>
+            <p className="text-sm font-bold text-ink">ESP32 DevKit v1</p>
+            <p className="text-xs font-mono text-muted">{d.id}</p>
           </div>
         </div>
         <div className="mt-5"><DeviceStatusPill online={d.online} lastHeartbeat={d.lastHeartbeat} /></div>
         <dl className="mt-6 space-y-3">
           {rows.map(([k, v]) => (
             <div key={k} className="flex items-center justify-between text-sm border-b border-slate-50 pb-2">
-              <dt className="text-slate-500">{k}</dt><dd className="font-medium font-mono text-slate-900">{v}</dd>
+              <dt className="text-muted">{k}</dt><dd className="font-medium font-mono text-ink">{v}</dd>
             </div>
           ))}
         </dl>
@@ -79,12 +79,12 @@ export default function DevicePage() {
           <div className="flex flex-col sm:flex-row items-stretch gap-3">
             {DATA_PATH.map((n, i) => (
               <Fragment key={n.t}>
-                <div className="flex-1 rounded-xl border border-slate-200 p-4 text-center">
-                  <span className="inline-flex w-10 h-10 rounded-xl bg-slate-100 text-slate-700 items-center justify-center mb-2"><n.icon size={18} /></span>
-                  <p className="text-sm font-semibold text-slate-900">{n.t}</p>
-                  <p className="text-xs text-slate-500">{n.s}</p>
+                <div className="flex-1 rounded-xl border border-line p-4 text-center">
+                  <span className="inline-flex w-10 h-10 rounded-xl bg-surface-2 text-ink-2 items-center justify-center mb-2"><n.icon size={18} /></span>
+                  <p className="text-sm font-semibold text-ink">{n.t}</p>
+                  <p className="text-xs text-muted">{n.s}</p>
                 </div>
-                {i < 3 && <div className="hidden sm:flex items-center text-slate-500"><ChevronRight size={18} /></div>}
+                {i < 3 && <div className="hidden sm:flex items-center text-muted"><ChevronRight size={18} /></div>}
               </Fragment>
             ))}
           </div>

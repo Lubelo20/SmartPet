@@ -15,11 +15,11 @@ export function PetCard({ pet, todayG, onView, onEdit }: PetCardProps) {
         <PetAvatar pet={pet} size={52} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-slate-900 truncate">{pet.name}</h3>
+            <h3 className="text-base font-bold text-ink truncate">{pet.name}</h3>
             <Badge tone={pet.status === "Active" ? "success" : "neutral"} dot>{pet.status}</Badge>
           </div>
-          <p className="text-sm text-slate-500 truncate">{pet.breed}</p>
-          <p className="text-xs font-mono text-slate-500 mt-0.5">{pet.id}</p>
+          <p className="text-sm text-muted truncate">{pet.breed}</p>
+          <p className="text-xs font-mono text-muted mt-0.5">{pet.id}</p>
         </div>
       </div>
       <dl className="grid grid-cols-2 gap-2 mt-4">

@@ -71,7 +71,7 @@ export default function SettingsPage() {
         <dl className="space-y-3">
           {deviceRows.map(([k, v]) => (
             <div key={k} className="flex items-center justify-between text-sm border-b border-slate-50 pb-2">
-              <dt className="text-slate-500">{k}</dt><dd className="font-medium font-mono text-slate-900">{v}</dd>
+              <dt className="text-muted">{k}</dt><dd className="font-medium font-mono text-ink">{v}</dd>
             </div>
           ))}
         </dl>
@@ -89,11 +89,11 @@ export default function SettingsPage() {
               // conveyed only by colour.
               role="switch"
               aria-checked={form.notifications[k]}
-              className="w-full flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+              className="w-full flex items-center justify-between rounded-xl border border-line px-4 py-3 hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
             >
-              <span className="text-sm font-medium text-slate-800">{label}</span>
-              <span aria-hidden="true" className={`relative w-10 h-6 rounded-full transition-colors ${form.notifications[k] ? "bg-emerald-500" : "bg-slate-200"}`}>
-                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${form.notifications[k] ? "left-4" : "left-0.5"}`} />
+              <span className="text-sm font-medium text-ink">{label}</span>
+              <span aria-hidden="true" className={`relative w-10 h-6 rounded-full transition-colors ${form.notifications[k] ? "bg-emerald-500" : "bg-line"}`}>
+                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-surface shadow transition-all ${form.notifications[k] ? "left-4" : "left-0.5"}`} />
               </span>
             </button>
           ))}

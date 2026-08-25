@@ -27,16 +27,16 @@ export function FeedingWorkflow({ cycle }: FeedingWorkflowProps) {
                 <span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors
                   ${isDone ? "bg-emerald-500 border-emerald-500 text-white"
                     : isCurrent ? "bg-amber-500 border-amber-500 text-white animate-pulse"
-                    : "bg-white border-slate-200 text-slate-500"}`}>
+                    : "bg-surface border-line text-muted"}`}>
                   {isDone ? <Check size={16} /> : i + 1}
                 </span>
                 {i < WORKFLOW_STEPS.length - 1 && (
-                  <span className={`lg:flex-1 lg:h-0.5 lg:w-full w-0.5 h-8 lg:my-0 my-1 rounded-full ${step > i ? "bg-emerald-400" : "bg-slate-200"}`} />
+                  <span className={`lg:flex-1 lg:h-0.5 lg:w-full w-0.5 h-8 lg:my-0 my-1 rounded-full ${step > i ? "bg-emerald-400" : "bg-line"}`} />
                 )}
               </div>
               <div className="pb-6 lg:pb-0 lg:pt-3 lg:pr-4">
-                <p className={`text-sm font-semibold ${isCurrent ? "text-slate-900" : isDone ? "text-slate-700" : "text-slate-500"}`}>{s.label}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{s.detail}</p>
+                <p className={`text-sm font-semibold ${isCurrent ? "text-ink" : isDone ? "text-ink-2" : "text-muted"}`}>{s.label}</p>
+                <p className="text-xs text-muted mt-0.5">{s.detail}</p>
               </div>
             </li>
           );

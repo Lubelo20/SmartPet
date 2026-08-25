@@ -21,8 +21,8 @@ export function DemoPanel({ demo, onToggle, onScenario, cycleActive }: DemoPanel
         title="Demo mode"
         subtitle="Simulate the hardware so the full workflow can be shown without the feeder connected."
         right={
-          <button onClick={onToggle} className={`relative w-12 h-7 rounded-full transition-colors ${demo ? "bg-amber-500" : "bg-slate-200"}`}>
-            <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${demo ? "left-6" : "left-1"}`} />
+          <button onClick={onToggle} className={`relative w-12 h-7 rounded-full transition-colors ${demo ? "bg-amber-500" : "bg-surface-2"}`}>
+            <span className={`absolute top-1 w-5 h-5 rounded-full bg-surface shadow transition-all ${demo ? "left-6" : "left-1"}`} />
           </button>
         } />
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">

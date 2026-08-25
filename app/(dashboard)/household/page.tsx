@@ -53,15 +53,15 @@ export default function HouseholdPage() {
         />
         <div className="space-y-2">
           {members.map((m) => (
-            <div key={m.uid} className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-3">
-              <span className="w-9 h-9 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
+            <div key={m.uid} className="flex items-center gap-3 rounded-xl border border-line px-3 py-3">
+              <span className="w-9 h-9 rounded-full bg-surface-2 text-muted flex items-center justify-center shrink-0">
                 <UserRound size={18} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-slate-900 truncate">
+                <span className="block text-sm font-medium text-ink truncate">
                   {m.displayName || m.email || m.uid}
                 </span>
-                <span className="block text-xs text-slate-500 truncate">
+                <span className="block text-xs text-muted truncate">
                   {m.displayName && m.email
                     ? m.email
                     : !m.email && !m.displayName
@@ -91,7 +91,7 @@ export default function HouseholdPage() {
           </span>
           <Button type="submit" disabled={busy || !email.trim()} icon={MailPlus}>Send invite</Button>
         </form>
-        <p className="text-xs text-slate-500 mt-2">
+        <p className="text-xs text-muted mt-2">
           They accept the first time they sign in with that address.
         </p>
       </Card>
@@ -110,10 +110,10 @@ export default function HouseholdPage() {
         ) : (
           <div className="space-y-2">
             {invites.map((i) => (
-              <div key={i.email} className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-3">
+              <div key={i.email} className="flex items-center gap-3 rounded-xl border border-line px-3 py-3">
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium text-slate-900 truncate">{i.email}</span>
-                  <span className="block text-xs text-slate-500">
+                  <span className="block text-sm font-medium text-ink truncate">{i.email}</span>
+                  <span className="block text-xs text-muted">
                     Invited {i.createdAt ? fmtDate(i.createdAt) : "recently"}
                   </span>
                 </span>

@@ -61,10 +61,10 @@ export default function HistoryPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-full sm:w-auto sm:inline-flex">
+      <div className="flex gap-1 p-1 bg-surface-2 rounded-xl w-full sm:w-auto sm:inline-flex">
         {([["log", "Feeding log"], ["analytics", "Analytics"]] as [Tab, string][]).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === k ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === k ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink-2"}`}>
             {label}
           </button>
         ))}
@@ -72,9 +72,9 @@ export default function HistoryPage() {
 
       {tab === "log" ? (
         <Card>
-          <div className="p-5 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center gap-3">
+          <div className="p-5 border-b border-line-soft flex flex-col lg:flex-row lg:items-center gap-3">
             <div className="relative flex-1">
-              <Search size={16} className="absolute left-3 top-3 text-slate-500" />
+              <Search size={16} className="absolute left-3 top-3 text-muted" />
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search pet, status or date"
                 className={`${inputCls} pl-9`} />
             </div>
@@ -93,13 +93,13 @@ export default function HistoryPage() {
           </div>
           <FeedingHistoryTable rows={view} pets={pets} />
           {filtered.length > 0 && (
-            <div className="flex items-center justify-between gap-4 p-4 border-t border-slate-100">
-              <p className="text-sm text-slate-500">
+            <div className="flex items-center justify-between gap-4 p-4 border-t border-line-soft">
+              <p className="text-sm text-muted">
                 Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, filtered.length)} of {filtered.length} cycles
               </p>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" icon={ChevronLeft} disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Prev</Button>
-                <span className="text-sm font-medium text-slate-600 font-mono">{page} / {pages}</span>
+                <span className="text-sm font-medium text-ink-2 font-mono">{page} / {pages}</span>
                 <Button variant="ghost" size="sm" disabled={page === pages} onClick={() => setPage((p) => p + 1)}>Next</Button>
               </div>
             </div>

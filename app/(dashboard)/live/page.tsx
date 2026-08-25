@@ -42,7 +42,7 @@ export default function LivePage() {
             <div className="space-y-2">
               {pets.map((p) => (
                 <Button key={p.id} variant="ghost" size="sm" className="w-full justify-between" onClick={() => requestFeed(p)} disabled={t.cycle.active}>
-                  <span>Feed {p.name}</span><span className="font-mono text-slate-500">{p.portionG} g</span>
+                  <span>Feed {p.name}</span><span className="font-mono text-muted">{p.portionG} g</span>
                 </Button>
               ))}
               <Button variant="danger" size="sm" className="w-full" onClick={() => void stopCycle()} disabled={!t.cycle.active}>Stop current cycle</Button>

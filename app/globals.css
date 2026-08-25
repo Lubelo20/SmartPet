@@ -1,1 +1,62 @@
 @import "tailwindcss";
+
+/*
+ * Tailwind v4's `dark:` variant keys off prefers-color-scheme by default, so a
+ * class on <html> would leave every `dark:` utility inert while the CSS
+ * variables below flipped correctly — half the app themed, half not. This
+ * points the variant at the class instead.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Semantic colour tokens.
+ *
+ * Components name the ROLE (`bg-surface`, `text-muted`) rather than the shade,
+ * so one class is correct in both themes. Adding `dark:` variants at every site
+ * would leave two sources of truth and double the surface of every future
+ * change.
+ *
+ * Tailwind v4 emits these as real CSS custom properties and compiles utilities
+ * to `var(--color-…)`, so redefining them under `html.dark` below re-themes the
+ * whole app without touching a single component.
+ */
+@theme {
+  --color-canvas: #f8fafc;      /* page background */
+  --color-surface: #ffffff;     /* cards, header, sidebar */
+  --color-surface-2: #f1f5f9;   /* subtle fills, avatars, hover */
+  --color-line: #e2e8f0;        /* borders */
+  --color-line-soft: #f1f5f9;   /* dividers */
+  --color-ink: #0f172a;         /* primary text */
+  --color-ink-2: #475569;       /* secondary text */
+  --color-muted: #64748b;       /* tertiary text — 4.76:1 on white, the AA floor */
+  --color-inverse: #0f172a;     /* filled dark surfaces: active nav, dark button */
+  --color-inverse-ink: #ffffff; /* text on those */
+}
+
+/*
+ * Dark values. Measured, not guessed — every text token clears 4.5:1 on all
+ * three backgrounds, and surface/canvas keep 1.21 separation so a card still
+ * reads as raised rather than melting into the page.
+ *
+ * Unlayered and `html.dark` on purpose: it must outrank the `:root` block
+ * Tailwind generates from `@theme`.
+ */
+html.dark {
+  --color-canvas: #060a12;
+  --color-surface: #161f33;
+  --color-surface-2: #22304d;
+  --color-line: #2a3550;
+  --color-line-soft: #22304d;
+  --color-ink: #f1f5f9;
+  --color-ink-2: #cbd5e1;
+  --color-muted: #94a3b8;
+  /* Inverted: a filled "dark" surface has to be light against a dark page. */
+  --color-inverse: #f1f5f9;
+  --color-inverse-ink: #0f172a;
+}
+
+/* The camera scene is a dark instrument panel in both themes by design. */
+html.dark ::selection {
+  background: #f59e0b;
+  color: #0f172a;
+}

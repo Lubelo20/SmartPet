@@ -82,6 +82,19 @@ one directly. This keeps that reaction logic in one place instead of duplicated 
 
 ## Conventions
 
+- **Colour goes through semantic tokens** (`app/globals.css`): `bg-surface`, `bg-canvas`,
+  `text-ink`, `text-ink-2`, `text-muted`, `border-line`, `bg-inverse`/`text-inverse-ink`.
+  One class is correct in both themes, because `html.dark` redefines the variables. Do not
+  add `dark:` variants for structural colour — that is two sources of truth. `dark:` is only
+  for fixed hues (`TONE`, `PET_COLOUR`, status pills), where a 50-level tint genuinely has
+  no dark equivalent.
+- **Tailwind v4's `dark:` keys off `prefers-color-scheme` unless told otherwise.**
+  `@custom-variant dark (&:where(.dark, .dark *))` in `globals.css` points it at the class.
+  Remove that line and every `dark:` utility silently stops working while the tokens keep
+  flipping — half the app themed, half not.
+- **Two colours are deliberately theme-independent.** `Button`'s primary label is a literal
+  `text-slate-900` because its background is amber in both themes, and the `ink` token would
+  flip to near-white at 1.96:1. `CameraPreview` is an instrument panel and stays dark in both.
 - **`TONE`** (`components/ui/tone.ts`) — the success/warning/critical/info/neutral map every
   status surface (badges, alerts, toasts) is built from. Add a new semantic colour there, not
   ad hoc in a component.

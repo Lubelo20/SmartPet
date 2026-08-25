@@ -36,11 +36,11 @@ export default function AlertsPage() {
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex gap-1 p-1 bg-slate-100 rounded-xl overflow-x-auto">
+        <div className="flex gap-1 p-1 bg-surface-2 rounded-xl overflow-x-auto">
           {FILTERS.map(([k, label]) => (
             <button key={k} onClick={() => setFilter(k)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${filter === k ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-              {label} <span className="text-slate-500 font-mono">{counts[k]}</span>
+              className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${filter === k ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink-2"}`}>
+              {label} <span className="text-muted font-mono">{counts[k]}</span>
             </button>
           ))}
         </div>

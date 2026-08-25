@@ -27,7 +27,7 @@ import { dayKey, timeAgo } from "@/lib/utils";
 // `next/link` can stand in for what was `onClick={() => onNavigate(...)}` in
 // the source without nesting a `<button>` inside the `<a>`'s own semantics.
 const navLinkClass =
-  "inline-flex items-center gap-2 font-semibold rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-400 justify-center text-xs px-3 py-2 bg-white text-slate-700 border border-slate-200 hover:bg-slate-50";
+  "inline-flex items-center gap-2 font-semibold rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-400 justify-center text-xs px-3 py-2 bg-surface text-ink-2 border border-line hover:bg-surface-2";
 
 const chartAxis = { stroke: "#94a3b8", fontSize: 12, tickLine: false, axisLine: false };
 const tooltipStyle = {
@@ -66,7 +66,7 @@ export default function DashboardPage() {
           value={t.device.online ? "ONLINE" : "OFFLINE"}
           caption={`Last update ${timeAgo(t.device.lastHeartbeat)}`}
         >
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
             <span className="font-mono">{t.device.id}</span>
             <span>{t.device.ssid} · {t.device.rssi} dBm</span>
           </div>
@@ -88,7 +88,7 @@ export default function DashboardPage() {
         >
           <div className="flex gap-1">
             {Array.from({ length: plannedToday }).map((_, i) => (
-              <span key={i} className={`h-1.5 flex-1 rounded-full ${i < today.length ? "bg-sky-500" : "bg-slate-200"}`} />
+              <span key={i} className={`h-1.5 flex-1 rounded-full ${i < today.length ? "bg-sky-500" : "bg-line"}`} />
             ))}
           </div>
         </StatusCard>
@@ -122,13 +122,13 @@ export default function DashboardPage() {
             <div className="space-y-2">
               {pets.map((p) => (
                 <button key={p.id} onClick={() => requestFeed(p)}
-                  className="w-full flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2.5 text-left hover:border-amber-300 hover:bg-amber-50 transition-colors">
+                  className="w-full flex items-center gap-3 rounded-xl border border-line px-3 py-2.5 text-left hover:border-amber-300 hover:bg-amber-50 transition-colors">
                   <PetAvatar pet={p} size={36} />
                   <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-semibold text-slate-900">{p.name}</span>
-                    <span className="block text-xs text-slate-500">{p.portionG} g portion</span>
+                    <span className="block text-sm font-semibold text-ink">{p.name}</span>
+                    <span className="block text-xs text-muted">{p.portionG} g portion</span>
                   </span>
-                  <Play size={16} className="text-slate-500" />
+                  <Play size={16} className="text-muted" />
                 </button>
               ))}
             </div>
@@ -143,13 +143,13 @@ export default function DashboardPage() {
                   <div key={a.id} className="flex items-start gap-3">
                     <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${tone.dot}`} />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-900 truncate">{a.title}</p>
-                      <p className="text-xs text-slate-500">{timeAgo(a.timestamp)}</p>
+                      <p className="text-sm font-medium text-ink truncate">{a.title}</p>
+                      <p className="text-xs text-muted">{timeAgo(a.timestamp)}</p>
                     </div>
                   </div>
                 );
               })}
-              {alerts.length === 0 && <p className="text-sm text-slate-500">Nothing to report.</p>}
+              {alerts.length === 0 && <p className="text-sm text-muted">Nothing to report.</p>}
             </div>
           </Card>
         </div>
