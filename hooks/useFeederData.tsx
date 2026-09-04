@@ -154,8 +154,16 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
   const lastSentAt = useRef<Record<string, number>>({});
   const TELEGRAM_COOLDOWN_MS = 5 * 60 * 1000;
 
-  // Last accepted feed per pet, for the cooldown. A ref: recording it must not
-  // re-render, and it is read at call time, never during render.
+  // Last feed per pet that actually put food in the bowl, for the cooldown.
+  // Written only from `cycle:complete` (below), never when a command is merely
+  // accepted: a cycle that is stopped, restarted out from under, or dropped by
+  // an offline device writes no FeedingRecord and must not lock the pet out.
+  //
+  // The same handler also pushes that record into `feedings`, which
+  // `decideFeeding` reads as well, so the two can never disagree about whether
+  // food was dispensed. The ref is kept because it is read at call time while
+  // `feedings` is captured at render time: it closes the window between the
+  // engine emitting the record and React committing the state update.
   const lastFeedAtRef = useRef<Record<string, number>>({});
 
   const sendToTelegram = useCallback((row: Alert) => {
@@ -195,6 +203,10 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
       case "cycle:complete": {
         const p = pets.find((x) => x.id === evt.record.petId);
         setFeedings((prev) => [evt.record, ...prev]);
+        // Food landed, so the cooldown starts here — not when the command was
+        // accepted. A short cycle counts too: some food was dispensed and the
+        // record is kept, so the cooldown must match the history.
+        lastFeedAtRef.current = { ...lastFeedAtRef.current, [evt.record.petId]: evt.record.timestamp };
         void services.feedings.append(evt.record)
           .catch(reportWriteFailure("Feeding not recorded", "The feeding record was not saved."));
         if (evt.short) {
@@ -236,11 +248,17 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
         break;
       case "schedule:skipped": {
         const p = pets.find((x) => x.id === evt.petId);
-        // A skipped meal must never be silent: the pet did not eat.
-        raiseAlert("warning", "Feeding skipped", `The ${evt.time} feeding was skipped`,
-          `${p ? p.name : "The pet"} has already reached the daily maximum, so the scheduled portion was not dispensed.`,
-          "Scheduler");
-        notify("cycle:short", { tone: "warning", title: "Scheduled feeding skipped", message: `${p ? p.name : "A pet"} is at the daily maximum, so the ${evt.time} portion was held back.` });
+        const name = p ? p.name : "The pet";
+        const shortName = p ? p.name : "A pet";
+        // One sentence per reason; the pet did not eat either way, so a skipped
+        // meal must never be silent.
+        const [alertText, toastText] = evt.reason === "pet-paused"
+          ? [`${name} is paused, so the scheduled portion was not dispensed. Set the pet back to Active to resume feeding.`,
+             `${shortName} is paused, so the ${evt.time} portion was held back.`]
+          : [`${name} has already reached the daily maximum, so the scheduled portion was not dispensed.`,
+             `${shortName} is at the daily maximum, so the ${evt.time} portion was held back.`];
+        raiseAlert("warning", "Feeding skipped", `The ${evt.time} feeding was skipped`, alertText, "Scheduler");
+        notify("cycle:short", { tone: "warning", title: "Scheduled feeding skipped", message: toastText });
         break;
       }
       case "sensor:error":
@@ -278,8 +296,9 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      // Accepting the command is not the same as dispensing food: the cooldown
+      // is recorded from `cycle:complete`, once a FeedingRecord exists.
       await commandBus.send("feeding.start", { petId: pet.id, portionG, trigger: "Manual" });
-      lastFeedAtRef.current = { ...lastFeedAtRef.current, [pet.id]: now };
     } catch (e) {
       toast({ tone: "critical", title: "Feeding failed", message: errorMessage(e, "The feeding command failed.") });
     }

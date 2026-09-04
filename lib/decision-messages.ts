@@ -30,7 +30,7 @@ export function rejectionMessage(
     case "AI_DISABLED":
       return { title: "Automatic feeding is off", message: "Identification-triggered feeding is switched off. Scheduled and manual feeding still work." };
     case "COOLDOWN_ACTIVE":
-      return { title: "Fed too recently", message: `${ctx.petName} was fed a moment ago. The cooldown stops a pet at the bowl being fed repeatedly.` };
+      return { title: "Fed too recently", message: `${ctx.petName} was fed within the feeding cooldown set in Settings. The cooldown stops a pet at the bowl being fed repeatedly.` };
     case "UNSAFE_AMOUNT":
       return { title: "Portion refused", message: `That portion is outside the safe range for ${ctx.petName}.` };
   }

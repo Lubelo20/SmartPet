@@ -62,7 +62,11 @@ export type EngineEvent =
   | { kind: "food:low"; grams: number }
   | { kind: "food:refilled" }
   | { kind: "sensor:error" }
-  | { kind: "schedule:skipped"; scheduleId: string; petId: string; time: string; reason: "daily-limit" };
+  | {
+      kind: "schedule:skipped"; scheduleId: string; petId: string; time: string;
+      /** Why the device held the portion back. "pet-paused" mirrors FEEDING_DISABLED. */
+      reason: "daily-limit" | "pet-paused";
+    };
 
 /** Describes the feeder itself — shared by every member of the household. */
 export type DeviceSettings = {

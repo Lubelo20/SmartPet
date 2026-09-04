@@ -331,6 +331,19 @@ export class SimulationEngine {
         // Claim it before acting, so a refusal is not retried every 400 ms.
         this.fired.add(key);
 
+        // "Paused" is the owner's plainest "stop feeding this animal" control.
+        // The manual path refuses via `decideFeeding` (FEEDING_DISABLED); the
+        // device holds the schedule, so it has to refuse here too or Paused
+        // would stop only half the feeds. Checked before the daily maximum,
+        // matching the order `decideFeeding` uses.
+        if (pet.status !== "Active") {
+          this.emit({
+            kind: "schedule:skipped", scheduleId: sch.id, petId: sch.petId,
+            time: sch.time, reason: "pet-paused",
+          });
+          break;
+        }
+
         const already = this.dailyTotals[sch.petId] ?? 0;
         if (this.maxDaily > 0 && already + sch.portionG > this.maxDaily) {
           this.emit({

@@ -342,6 +342,40 @@ describe("SimulationEngine — scheduled feeding", () => {
     h.engine.stop();
   });
 
+  it("skips a scheduled feed for a paused pet", () => {
+    // Paused is the owner's "stop feeding this animal" control. The manual path
+    // already refuses (FEEDING_DISABLED); the device fires schedules itself, so
+    // it must refuse too or Paused would stop only half the feeds.
+    at(2026, 7, 24, 6, 29);
+    const h = harness();
+    h.engine.setPets([demoPet({ status: "Paused" })]);
+    h.engine.setSchedules([sched()]);
+
+    at(2026, 7, 24, 6, 30);
+    vi.advanceTimersByTime(2_000);
+
+    expect(h.store.get().cycle.active).toBe(false);
+    expect(h.events.some((e) => e.kind === "cycle:start")).toBe(false);
+    expect(h.events.find((e) => e.kind === "schedule:skipped")).toEqual({
+      kind: "schedule:skipped", scheduleId: "SCH001", petId: "PET009",
+      time: "06:30", reason: "pet-paused",
+    });
+    h.engine.stop();
+  });
+
+  it("does not retry a schedule skipped for a paused pet", () => {
+    at(2026, 7, 24, 6, 29);
+    const h = harness();
+    h.engine.setPets([demoPet({ status: "Paused" })]);
+    h.engine.setSchedules([sched()]);
+
+    at(2026, 7, 24, 6, 30);
+    vi.advanceTimersByTime(60_000);
+
+    expect(h.events.filter((e) => e.kind === "schedule:skipped").length).toBe(1);
+    h.engine.stop();
+  });
+
   it("fires when the daily maximum still has room", () => {
     at(2026, 7, 24, 6, 29);
     const h = harness();
