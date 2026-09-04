@@ -9,7 +9,9 @@ import type {
   Alert, AlertSeverity, EngineEvent, FeedingRecord, HouseholdMember, Invite, NewPet, Pet,
   Schedule, Settings, Telemetry,
 } from "@/lib/types";
-import { checkDailyLimit, dailyTotalFor } from "@/lib/limits";
+import { decideFeeding } from "@/lib/decision";
+import { rejectionMessage } from "@/lib/decision-messages";
+import { dailyTotalFor } from "@/lib/limits";
 import { shouldToast } from "@/lib/notifications";
 import { formatAlertMessage, shouldSendAlert } from "@/lib/telegram";
 import { buildSeedSettings } from "@/lib/seed-data";
@@ -152,6 +154,10 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
   const lastSentAt = useRef<Record<string, number>>({});
   const TELEGRAM_COOLDOWN_MS = 5 * 60 * 1000;
 
+  // Last accepted feed per pet, for the cooldown. A ref: recording it must not
+  // re-render, and it is read at call time, never during render.
+  const lastFeedAtRef = useRef<Record<string, number>>({});
+
   const sendToTelegram = useCallback((row: Alert) => {
     if (!shouldSendAlert(row, settings.notifications)) return;
 
@@ -247,29 +253,37 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
 
   const dispense = useCallback(async (pet: Pet, portionG: number) => {
     if (!pet) return;
+    const now = Date.now();
 
-    // The settings page states plainly that the device refuses commands beyond
-    // the daily total. Nothing enforced it, so this is where that promise is
-    // kept — before the command is sent, not after food has already moved.
-    const limit = checkDailyLimit(pet.id, feedings, portionG, settings.maxDaily, Date.now());
-    if (!limit.allowed) {
-      toast({
-        tone: "critical",
-        title: "Daily limit reached",
-        message: `${pet.name} has had ${limit.alreadyToday} g of a ${limit.limit} g daily maximum. ` +
-          (limit.remaining > 0
-            ? `Only ${limit.remaining} g left today.`
-            : "No more food is allowed today."),
-      });
+    // Every refusal in one place. This used to enforce the daily maximum
+    // alone; the engine adds the cooldown, the safe-portion range, the food
+    // level and the device check, and words each refusal once.
+    const verdict = decideFeeding({
+      now,
+      trigger: "Manual",
+      prediction: null,
+      pet,
+      settings,
+      telemetry: { device: t.device, hopper: t.hopper },
+      schedules,
+      todaysFeedings: feedings,
+      lastFeedAt: lastFeedAtRef.current,
+      requestedG: portionG,
+    });
+
+    if (verdict.decision === "REJECTED") {
+      const { title, message } = rejectionMessage(verdict.reason, { petName: pet.name });
+      toast({ tone: "critical", title, message });
       return;
     }
 
     try {
       await commandBus.send("feeding.start", { petId: pet.id, portionG, trigger: "Manual" });
+      lastFeedAtRef.current = { ...lastFeedAtRef.current, [pet.id]: now };
     } catch (e) {
       toast({ tone: "critical", title: "Feeding failed", message: errorMessage(e, "The feeding command failed.") });
     }
-  }, [commandBus, toast, feedings, settings.maxDaily]);
+  }, [commandBus, toast, feedings, settings, schedules, t]);
 
   const stopCycle = useCallback(async () => {
     try { await commandBus.send("feeding.stop"); }
