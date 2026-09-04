@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const [{ onAuthStateChanged }, { getFirebase }, household] = await Promise.all([
         firebaseAuthModule(), clientModule(), householdModule(),
       ]);
-      const { resolveHousehold, ensureMemberRecord } = household;
+      const { resolveSession } = household;
       if (cancelled) return;
       const { auth, db } = getFirebase();
 
@@ -73,11 +73,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         try {
           const { householdId: hid, pendingInviteHid: invite } =
-            await resolveHousehold(db, next.uid, next.email);
+            await resolveSession(db, next.uid, next.email, next.displayName);
           setHouseholdId(hid);
           setPendingInviteHid(invite);
           setStatus(hid ? "ready" : "no-household");
-          if (hid) void ensureMemberRecord(db, hid, next.uid, next.email, next.displayName);
         } catch {
           setHouseholdId(null);
           setPendingInviteHid(null);
@@ -91,12 +90,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const reresolve = useCallback(async () => {
     if (isMock || !user) return;
-    const [{ getFirebase }, { resolveHousehold }] = await Promise.all([
+    const [{ getFirebase }, { resolveSession }] = await Promise.all([
       clientModule(), householdModule(),
     ]);
     const { db } = getFirebase();
     const { householdId: hid, pendingInviteHid: invite } =
-      await resolveHousehold(db, user.uid, user.email);
+      await resolveSession(db, user.uid, user.email, user.displayName);
     setHouseholdId(hid);
     setPendingInviteHid(invite);
     setStatus(hid ? "ready" : "no-household");

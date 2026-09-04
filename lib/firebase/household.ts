@@ -85,6 +85,28 @@ export async function ensureMemberRecord(
   }
 }
 
+/**
+ * Resolve a household and record who the member is, as one step.
+ *
+ * These were two calls the caller had to remember to pair, and one of the two
+ * paths that resolve a household — the provider's reresolve(), used after
+ * createHousehold and acceptInvite — forgot the second. The record was then
+ * written only on the *next* sign-in, so a freshly created household listed a
+ * bare uid. Pairing them here means a caller cannot resolve without recording.
+ */
+export async function resolveSession(
+  db: Firestore,
+  uid: string,
+  email: string | null,
+  displayName: string | null,
+): Promise<{ householdId: string | null; pendingInviteHid: string | null }> {
+  const resolved = await resolveHousehold(db, uid, email);
+  if (resolved.householdId) {
+    await ensureMemberRecord(db, resolved.householdId, uid, email, displayName);
+  }
+  return resolved;
+}
+
 export async function acceptInviteFor(
   db: Firestore,
   uid: string,

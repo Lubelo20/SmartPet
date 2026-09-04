@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { initializeTestEnvironment, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
 import { doc, getDoc, setDoc, type Firestore } from "firebase/firestore";
-import { acceptInviteFor, createHouseholdFor, resolveHousehold } from "@/lib/firebase/household";
+import { acceptInviteFor, createHouseholdFor, resolveHousehold, resolveSession } from "@/lib/firebase/household";
 
 let testEnv: RulesTestEnvironment;
 const ALICE = { uid: "alice", email: "alice@example.com" };
@@ -79,5 +79,51 @@ describe("acceptInviteFor", () => {
   it("rejects when no invite exists", async () => {
     const db = dbFor(BOB.uid, BOB.email);
     await expect(acceptInviteFor(db, BOB.uid, BOB.email)).rejects.toMatchObject({ kind: "not-found" });
+  });
+});
+
+/**
+ * Two code paths reached a resolved household — onAuthStateChanged and the
+ * provider's reresolve() after createHousehold/acceptInvite — and only the
+ * first wrote members/{uid}. A household created live had an empty members
+ * collection, so the Household page listed a bare uid. resolveSession is the
+ * single path both now use.
+ */
+describe("resolveSession", () => {
+  it("writes the member record for a household the user already belongs to", async () => {
+    const db = dbFor(ALICE.uid, ALICE.email);
+    const hid = await createHouseholdFor(db, ALICE.uid, "Alice");
+
+    const res = await resolveSession(db, ALICE.uid, ALICE.email, "Alice");
+
+    expect(res.householdId).toBe(hid);
+    const member = await getDoc(doc(db, "households", hid, "members", ALICE.uid));
+    expect(member.exists()).toBe(true);
+    expect(member.data()?.email).toBe(ALICE.email);
+    expect(member.data()?.displayName).toBe("Alice");
+  });
+
+  it("writes the member record for someone who has just accepted an invite", async () => {
+    const alice = dbFor(ALICE.uid, ALICE.email);
+    const hid = await createHouseholdFor(alice, ALICE.uid, "Alice");
+    await setDoc(doc(alice, "invites", BOB.email), {
+      hid, invitedBy: ALICE.uid, createdAt: Date.now(),
+    });
+
+    const bob = dbFor(BOB.uid, BOB.email);
+    await acceptInviteFor(bob, BOB.uid, BOB.email);
+    const res = await resolveSession(bob, BOB.uid, BOB.email, null);
+
+    expect(res.householdId).toBe(hid);
+    const member = await getDoc(doc(bob, "households", hid, "members", BOB.uid));
+    expect(member.exists()).toBe(true);
+    expect(member.data()?.email).toBe(BOB.email);
+  });
+
+  it("writes nothing when the user has no household", async () => {
+    const db = dbFor(BOB.uid, BOB.email);
+    const res = await resolveSession(db, BOB.uid, BOB.email, null);
+    expect(res.householdId).toBeNull();
+    expect(res.pendingInviteHid).toBeNull();
   });
 });
