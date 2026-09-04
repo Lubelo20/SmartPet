@@ -60,6 +60,14 @@ export default function SettingsPage() {
           <Field label="Maximum daily portion per pet (g)" hint="The device refuses commands beyond this total">
             <Input type="number" value={form.maxDaily} onChange={(e) => set("maxDaily", Number(e.target.value))} />
           </Field>
+          <Field label="Feed cooldown (seconds)" hint="Minimum gap between feeds for one pet. 0 disables it.">
+            <Input
+              type="number"
+              min={0}
+              value={form.feedCooldownS}
+              onChange={(e) => set("feedCooldownS", Number(e.target.value))}
+            />
+          </Field>
           <Field label="Confidence threshold (%)" hint="Below this, the feeder will not dispense">
             <Input type="number" value={form.confidenceThreshold} onChange={(e) => set("confidenceThreshold", Number(e.target.value))} />
           </Field>

@@ -5,7 +5,7 @@ import { resetSeed, rint, rnd, uid } from "@/lib/utils";
 export function buildSeedSettings(): Settings {
   return {
     deviceName: "Kitchen feeder", timezone: "Africa/Johannesburg (SAST)", unit: "Grams (g)",
-    defaultPortion: 120, maxDaily: 600, confidenceThreshold: 75,
+    defaultPortion: 120, maxDaily: 600, confidenceThreshold: 75, feedCooldownS: 300,
     notifications: { ...DEFAULT_NOTIFICATIONS },
   };
 }

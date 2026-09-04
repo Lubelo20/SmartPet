@@ -68,6 +68,12 @@ export type EngineEvent =
 export type DeviceSettings = {
   deviceName: string; timezone: string; unit: string;
   defaultPortion: number; maxDaily: number; confidenceThreshold: number;
+  /**
+   * Seconds a pet must wait between feeds. Stops a pet that stays at the bowl
+   * being fed repeatedly. 0 disables the check — a blank field must never lock
+   * the feeder out, the same rule `checkDailyLimit` follows for its limit.
+   */
+  feedCooldownS: number;
 };
 
 /** Personal to one member: which events are allowed to interrupt them. */

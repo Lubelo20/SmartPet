@@ -197,4 +197,13 @@ describe.each(cases)("$name adapter satisfies the contract", ({ make }) => {
     await svc.alerts.append({ ...sample, id: "AL_contract", timestamp: sample.timestamp + 1 });
     expect((await svc.alerts.list()).length).toBe(before + 1);
   });
+
+  it("round-trips feedCooldownS through the adapter", async () => {
+    const before = await svc.settings.get();
+    expect(typeof before.feedCooldownS).toBe("number");
+
+    const saved = await svc.settings.save({ ...before, feedCooldownS: 600 });
+    expect(saved.feedCooldownS).toBe(600);
+    expect((await svc.settings.get()).feedCooldownS).toBe(600);
+  });
 });

@@ -18,7 +18,16 @@ function loadStoredSettings(): Settings | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(SETTINGS_KEY);
-    return raw ? (JSON.parse(raw) as Settings) : null;
+    if (!raw) return null;
+    const stored = JSON.parse(raw) as Partial<Settings>;
+    // Defaults underneath, so a payload stored before a field existed gains it
+    // rather than reading undefined.
+    const defaults = buildSeedSettings();
+    return {
+      ...defaults,
+      ...stored,
+      notifications: { ...defaults.notifications, ...(stored.notifications ?? {}) },
+    };
   } catch {
     return null;
   }
