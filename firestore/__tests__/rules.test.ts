@@ -280,3 +280,58 @@ describe("invites", () => {
     await assertSucceeds(deleteDoc(doc(bob(), "invites", BOB.email)));
   });
 });
+
+describe("AI collections", () => {
+  it("lets a member read and write detections in their own household", async () => {
+    await seedHousehold();
+    const db = alice();
+    await assertSucceeds(setDoc(doc(db, "households", HID, "detections", "d1"), {
+      deviceId: "ESP32-PETFEEDER-001", petId: "p1", confidence: 0.96,
+      status: "RECOGNIZED", timestamp: 1_756_000_000_000,
+    }));
+    await assertSucceeds(getDoc(doc(db, "households", HID, "detections", "d1")));
+  });
+
+  it("lets a member write feedingEvents and trainingImages", async () => {
+    await seedHousehold();
+    const db = alice();
+    await assertSucceeds(setDoc(doc(db, "households", HID, "feedingEvents", "e1"), {
+      requestId: "FEED-1", decision: "REJECTED", reason: "UNKNOWN_PET",
+      timestamp: 1_756_000_000_000,
+    }));
+    await assertSucceeds(setDoc(doc(db, "households", HID, "trainingImages", "i1"), {
+      petId: "p1", storagePath: "training/house1/p1/i1.jpg", approved: true,
+      uploadedAt: 1_756_000_000_000,
+    }));
+  });
+
+  it("refuses a non-member reading another household's detections", async () => {
+    await seedHousehold();
+    await assertFails(getDoc(doc(bob(), "households", HID, "detections", "d1")));
+  });
+
+  it("refuses writes to a collection not on the allowed list", async () => {
+    await seedHousehold();
+    await assertFails(setDoc(doc(alice(), "households", HID, "somethingElse", "x"), { a: 1 }));
+  });
+
+  it("lets any signed-in user read the model registry", async () => {
+    await seedHousehold();
+    const db = bob();
+    await assertSucceeds(getDoc(doc(db, "models", "v1.0")));
+    await assertSucceeds(getDoc(doc(db, "system", "ai")));
+  });
+
+  it("refuses a client writing the model registry, however it is dressed up", async () => {
+    await seedHousehold();
+    const db = alice();
+    await assertFails(setDoc(doc(db, "models", "v9.9"), { status: "ACTIVE", accuracy: 1 }));
+    await assertFails(setDoc(doc(db, "system", "ai"), { activeModelVersion: "v9.9" }));
+    await assertFails(setDoc(doc(db, "trainingSessions", "s1"), { status: "COMPLETE" }));
+  });
+
+  it("refuses an unauthenticated read of the model registry", async () => {
+    await seedHousehold();
+    await assertFails(getDoc(doc(anon(), "models", "v1.0")));
+  });
+});

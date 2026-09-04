@@ -61,7 +61,8 @@ service cloud.firestore {
       // to any member cannot later be narrowed for one collection beneath it.
       match /{collection}/{docId} {
         allow read, write: if isMember(hid)
-          && collection in ['pets', 'feedingHistory', 'feedingSchedules', 'alerts', 'settings'];
+          && collection in ['pets', 'feedingHistory', 'feedingSchedules', 'alerts', 'settings',
+                            'detections', 'feedingEvents', 'trainingImages'];
       }
 
       // One document per member, holding preferences personal to them. Any
@@ -86,5 +87,14 @@ service cloud.firestore {
 
       allow update: if false;
     }
+
+    // The model registry is global — one model serves every household — and is
+    // written only by the training job and the activation callable, both of
+    // which use the Admin SDK and bypass rules. A client that could mark a
+    // model ACTIVE could point every feeder in the system at a model it
+    // trained itself, so no client may write here at all.
+    match /models/{version}      { allow read: if signedIn(); allow write: if false; }
+    match /system/{doc}          { allow read: if signedIn(); allow write: if false; }
+    match /trainingSessions/{id} { allow read: if signedIn(); allow write: if false; }
   }
 }
