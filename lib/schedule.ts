@@ -47,3 +47,28 @@ export function firedKey(schedule: Schedule, at: Date): string {
   const d = String(at.getDate()).padStart(2, "0");
   return `${schedule.id}@${y}-${m}-${d}`;
 }
+
+/**
+ * Whether `at` falls inside a feeding window for this pet.
+ *
+ * Deliberately not `isDue`: that stays true for the rest of the day once the
+ * time passes, which is right for "the device still owes this meal" and wrong
+ * for "an animal is at the bowl now". A window is symmetric around the
+ * scheduled minute and closes again.
+ */
+export function withinScheduleWindow(
+  schedules: Schedule[],
+  petId: string,
+  at: Date,
+  windowMinutes: number,
+): boolean {
+  const nowMins = at.getHours() * 60 + at.getMinutes();
+  return schedules.some((s) => {
+    if (s.petId !== petId) return false;
+    if (!s.enabled) return false;
+    if (!matchesDays(s.days, at)) return false;
+    const mins = minutesOfDay(s.time);
+    if (mins === null) return false;
+    return Math.abs(nowMins - mins) < windowMinutes;
+  });
+}
