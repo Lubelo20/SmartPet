@@ -240,6 +240,15 @@ match /trainingSessions/{id} { allow read: if signedIn(); allow write: if false;
 `allow write: if false` on `models/` is the point. A client that could mark a model ACTIVE
 could point every feeder at a model it trained itself.
 
+**`read` grants `list`, and that is a constraint on sub-project C.** Any signed-in user can
+enumerate every document in `models`, `system` and `trainingSessions` unfiltered — unlike
+`households` and `invites`, whose `list` rules are constrained per document. That is
+harmless while nothing writes those collections. It stops being harmless the moment
+`trainingSessions` carries household ids, pet ids or Storage paths (§8), because unfiltered
+`list` then leaks one household's metadata to every signed-in user of the system. The
+sub-project that first writes a `trainingSessions` document must either keep household
+identifiers out of it or replace `read` with a constrained `get`/`list` pair.
+
 **Every rule above gets emulator tests before the code that relies on it**, in the style of
 the existing 22.
 
