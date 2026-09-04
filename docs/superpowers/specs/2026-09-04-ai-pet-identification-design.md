@@ -51,7 +51,7 @@ creates two sources of truth for whether an animal eats.
 | §6 Pet registration | Full CRUD, form modal, cards, avatars | `services/*/pets`, `components/feeder/PetFormModal.tsx` |
 | §5 Configurable confidence threshold | `Settings.confidenceThreshold`, injected into the engine, already blocks feeding | `lib/types.ts`, `services/simulation.ts:249` |
 | §16 Daily-limit check | `checkDailyLimit`, enforced in the `dispense` mutator | `lib/limits.ts` |
-| §17 Some rejection reasons | `detection:unknown`, `cycle:stopped`, `schedule:skipped{reason:'daily-limit'}` | `lib/types.ts` `EngineEvent` |
+| §17 Some rejection reasons | `detection:unknown`, `cycle:stopped`, `schedule:skipped{reason:'daily-limit'|'pet-paused'}` | `lib/types.ts` `EngineEvent` |
 | §14 Pet detection card | Renders `idle`/`detected`/`identifying`/`identified`/`unknown` | `components/feeder/PetDetectionPanel.tsx` |
 | §15 Live camera | Frame, overlay, timestamp, resolution | `components/feeder/CameraPreview.tsx` |
 | §19 Load-cell verification | `targetG` vs `actualG`, `Under-dispensed` status | `lib/types.ts` `FeedingRecord` |
