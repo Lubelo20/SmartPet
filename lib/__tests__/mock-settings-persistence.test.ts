@@ -74,4 +74,41 @@ describe("mock adapter settings persistence", () => {
     const cfg = await createMockAdapter().settings.get();
     expect(cfg.deviceName).toBe("Kitchen feeder");
   });
+
+  it("gives a blob stored before feedCooldownS existed the default, not undefined", async () => {
+    // This is the fail-OPEN direction: `undefined > 0` is false, so a missing
+    // cooldown would silently stop governing and a pet standing at the bowl
+    // could be fed again immediately, with no error anywhere.
+    const store = fakeStorage();
+    store.setItem("feeder.settings", JSON.stringify({
+      deviceName: "Legacy feeder", timezone: "Africa/Johannesburg (SAST)",
+      unit: "Grams (g)", defaultPortion: 120, maxDaily: 600, confidenceThreshold: 75,
+      // No feedCooldownS and no notifications: exactly what a payload written
+      // before either field existed looks like.
+    }));
+    vi.stubGlobal("window", { localStorage: store });
+    vi.stubGlobal("localStorage", store);
+
+    const cfg = await createMockAdapter().settings.get();
+    expect(cfg.deviceName).toBe("Legacy feeder"); // the stored fields survive
+    expect(cfg.feedCooldownS).toBe(300);
+    expect(cfg.feedCooldownS).not.toBeUndefined();
+    expect(cfg.notifications).toEqual({
+      lowFood: true, offline: true, feedingError: true, unknownPet: true,
+    });
+  });
+
+  it("keeps a stored feedCooldownS of 0, rather than treating it as missing", async () => {
+    // 0 means "cooldown disabled" and is a legitimate saved value; a merge that
+    // used `||` instead of spread would quietly turn it back into 300.
+    const store = fakeStorage();
+    vi.stubGlobal("window", { localStorage: store });
+    vi.stubGlobal("localStorage", store);
+
+    const first = createMockAdapter();
+    const before = await first.settings.get();
+    await first.settings.save({ ...before, feedCooldownS: 0 });
+
+    expect((await createMockAdapter().settings.get()).feedCooldownS).toBe(0);
+  });
 });
