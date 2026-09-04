@@ -119,3 +119,22 @@ export type HouseholdMember = {
 };
 
 export type SessionStatus = "resolving" | "signed-out" | "no-household" | "ready";
+
+export type DetectionStatus = "RECOGNIZED" | "UNKNOWN" | "ERROR";
+
+export type RejectionReason =
+  | "UNKNOWN_PET" | "LOW_AI_CONFIDENCE" | "FEEDING_DISABLED"
+  | "DAILY_LIMIT_REACHED" | "OUTSIDE_SCHEDULE" | "INSUFFICIENT_FOOD"
+  | "DEVICE_OFFLINE" | "AI_SERVICE_OFFLINE" | "AI_DISABLED"
+  | "COOLDOWN_ACTIVE" | "UNSAFE_AMOUNT";
+
+/** What asked for this feed. AI checks apply only to "AI". */
+export type FeedTrigger = "Manual" | "Scheduled" | "AI";
+
+/** A model's answer. `confidence` is 0..1 — see the decision engine for the one place it meets the 0..100 threshold. */
+export type Prediction = {
+  petId: string | null;
+  confidence: number;
+  status: DetectionStatus;
+  modelVersion: string | null;
+};
