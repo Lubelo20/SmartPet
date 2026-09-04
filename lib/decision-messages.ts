@@ -18,7 +18,7 @@ export function rejectionMessage(
     case "FEEDING_DISABLED":
       return { title: "Feeding paused", message: `${ctx.petName} is paused. Set the pet back to Active to allow feeding.` };
     case "DAILY_LIMIT_REACHED":
-      return { title: "Daily limit reached", message: `${ctx.petName} has already had the daily maximum. Raise it in Settings if that is wrong.` };
+      return { title: "Daily limit reached", message: `Feeding this portion would take ${ctx.petName} past the daily maximum. Raise the limit in Settings if that is wrong.` };
     case "OUTSIDE_SCHEDULE":
       return { title: "Outside feeding times", message: `This is not one of ${ctx.petName}'s scheduled meal times.` };
     case "INSUFFICIENT_FOOD":
