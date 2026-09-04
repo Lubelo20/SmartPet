@@ -73,6 +73,19 @@ describe("decideFeeding — approval", () => {
     }));
     expect(d.decision).toBe("APPROVED");
   });
+
+  it("approves a scheduled feed with no prediction at all", () => {
+    const d = decideFeeding(input({ trigger: "Scheduled", prediction: null }));
+    expect(d.decision).toBe("APPROVED");
+  });
+
+  it("approves a scheduled feed outside every schedule window", () => {
+    const d = decideFeeding(input({
+      trigger: "Scheduled", prediction: null,
+      now: new Date(2026, 8, 4, 23, 0, 0, 0).getTime(),
+    }));
+    expect(d.decision).toBe("APPROVED");
+  });
 });
 
 describe("decideFeeding — rejection", () => {
@@ -144,10 +157,38 @@ describe("decideFeeding — rejection", () => {
   });
 
   it("refuses once the daily limit would be breached", () => {
+    // Timestamped well before NOW so this exercises the daily-limit check, not
+    // the cooldown check that now also reads `todaysFeedings`.
     const d = decideFeeding(input({
-      todaysFeedings: [feeding({ actualG: 550 })], requestedG: 100,
+      todaysFeedings: [feeding({ actualG: 550, timestamp: NOW - 3_600_000 })], requestedG: 100,
     }));
     expect(d).toEqual({ decision: "REJECTED", reason: "DAILY_LIMIT_REACHED", petId: "p1" });
+  });
+
+  it("refuses a NaN requested amount", () => {
+    const d = decideFeeding(input({ requestedG: NaN }));
+    expect(d).toEqual({ decision: "REJECTED", reason: "UNSAFE_AMOUNT", petId: "p1" });
+  });
+
+  it("refuses a NaN requested amount even when the daily limit is not configured", () => {
+    const d = decideFeeding(input({
+      requestedG: NaN, settings: settings({ maxDaily: 0 }),
+    }));
+    expect(d).toEqual({ decision: "REJECTED", reason: "UNSAFE_AMOUNT", petId: "p1" });
+  });
+
+  it("refuses inside the cooldown when only todaysFeedings records the last feed", () => {
+    const d = decideFeeding(input({
+      todaysFeedings: [feeding({ timestamp: NOW - 60_000 })], lastFeedAt: {},
+    }));
+    expect(d).toEqual({ decision: "REJECTED", reason: "COOLDOWN_ACTIVE", petId: "p1" });
+  });
+
+  it("refuses when the recognised pet document does not match the prediction", () => {
+    const d = decideFeeding(input({
+      pet: pet({ id: "p1" }), prediction: prediction({ petId: "p2" }),
+    }));
+    expect(d).toEqual({ decision: "REJECTED", reason: "UNKNOWN_PET", petId: "p2" });
   });
 
   it("refuses an AI feed outside every schedule window", () => {

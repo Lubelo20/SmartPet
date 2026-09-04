@@ -59,6 +59,8 @@ export function decideFeeding(input: DecisionInput): Decision {
     if (prediction.confidence < settings.confidenceThreshold / 100) {
       return reject("LOW_AI_CONFIDENCE", prediction.petId);
     }
+    // The caller resolves the pet document; it is not this function's to trust.
+    if (pet !== null && pet.id !== prediction.petId) return reject("UNKNOWN_PET", prediction.petId);
   }
 
   // 4. A model keeps predicting a class after its pet is deleted. Deletion wins.
@@ -71,11 +73,18 @@ export function decideFeeding(input: DecisionInput): Decision {
   // 6. Derived from the pet's own portion, so a chihuahua's ceiling is not a
   // labrador's, with an absolute cap above it.
   const maxSafeG = Math.min(pet.portionG * 2, ABSOLUTE_MAX_PORTION_G);
-  if (requestedG < 1 || requestedG > maxSafeG) return reject("UNSAFE_AMOUNT", pet.id);
+  if (!Number.isFinite(requestedG) || requestedG < 1 || requestedG > maxSafeG) return reject("UNSAFE_AMOUNT", pet.id);
 
   // 7. A pet that stays at the bowl must not be fed repeatedly. 0 disables.
-  const last = input.lastFeedAt[pet.id];
-  if (settings.feedCooldownS > 0 && last !== undefined
+  // Cross-checked against `todaysFeedings`, not just `lastFeedAt`: the ref that
+  // backs `lastFeedAt` is in-memory and a page reload empties it, so the record
+  // of an actual feed today is the more durable source of truth.
+  const lastRecorded = input.todaysFeedings
+    .filter((f) => f.petId === pet.id)
+    .reduce((max, f) => Math.max(max, f.timestamp), 0);
+  const lastFromRef = input.lastFeedAt[pet.id] ?? 0;
+  const last = Math.max(lastRecorded, lastFromRef);
+  if (settings.feedCooldownS > 0 && last > 0
       && now - last < settings.feedCooldownS * 1000) {
     return reject("COOLDOWN_ACTIVE", pet.id);
   }
