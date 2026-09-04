@@ -41,6 +41,20 @@ async function seedHousehold(memberUids: string[] = [ALICE.uid]) {
   });
 }
 
+/**
+ * Seed the global AI documents the way the training job would, bypassing rules.
+ * Without an existing document, `assertFails(setDoc(...))` only ever proves the
+ * `create` path is closed.
+ */
+async function seedGlobalDocs() {
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, "models", "v1.0"), { status: "ARCHIVED", accuracy: 0.9 });
+    await setDoc(doc(db, "system", "ai"), { activeModelVersion: "v1.0" });
+    await setDoc(doc(db, "trainingSessions", "s1"), { status: "RUNNING" });
+  });
+}
+
 async function seedInvite(email: string, hid: string = HID) {
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
     await setDoc(doc(ctx.firestore(), "invites", email), {
@@ -330,8 +344,47 @@ describe("AI collections", () => {
     await assertFails(setDoc(doc(db, "trainingSessions", "s1"), { status: "COMPLETE" }));
   });
 
+  it("refuses a client updating or deleting a model that already exists", async () => {
+    // `setDoc` on a document that does not exist only exercises `create`. The
+    // dangerous edit is the other half: someone adding `allow update: if
+    // isAdmin()` beside a retained `allow create: if false` would leave every
+    // create-only test green while letting a client mark its own model ACTIVE
+    // — which is precisely what the rule's comment says it prevents.
+    await seedHousehold();
+    await seedGlobalDocs();
+    const db = alice();
+    await assertFails(updateDoc(doc(db, "models", "v1.0"), { status: "ACTIVE" }));
+    await assertFails(deleteDoc(doc(db, "models", "v1.0")));
+    await assertFails(setDoc(doc(db, "models", "v1.0"), { status: "ACTIVE", accuracy: 1 }));
+  });
+
+  it("refuses a client updating or deleting the active-model pointer", async () => {
+    await seedHousehold();
+    await seedGlobalDocs();
+    const db = alice();
+    await assertFails(updateDoc(doc(db, "system", "ai"), { activeModelVersion: "v9.9" }));
+    await assertFails(deleteDoc(doc(db, "system", "ai")));
+  });
+
+  it("refuses a client updating or deleting a training session", async () => {
+    await seedHousehold();
+    await seedGlobalDocs();
+    const db = alice();
+    await assertFails(updateDoc(doc(db, "trainingSessions", "s1"), { status: "COMPLETE" }));
+    await assertFails(deleteDoc(doc(db, "trainingSessions", "s1")));
+  });
+
   it("refuses an unauthenticated read of the model registry", async () => {
     await seedHousehold();
     await assertFails(getDoc(doc(anon(), "models", "v1.0")));
+  });
+
+  it("refuses an unauthenticated read of system and training sessions", async () => {
+    // Same rule, same reasoning: these three share `allow read: if signedIn()`,
+    // so all three need the anonymous denial asserted, not just one.
+    await seedHousehold();
+    await seedGlobalDocs();
+    await assertFails(getDoc(doc(anon(), "system", "ai")));
+    await assertFails(getDoc(doc(anon(), "trainingSessions", "s1")));
   });
 });
