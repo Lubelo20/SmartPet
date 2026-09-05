@@ -453,6 +453,46 @@ A (decision engine + types + rules)        no billing    ← start here
 A first because everything calls it and it is the part that must never be wrong. F last
 because it is the only part nobody here can test.
 
+## 14a. Amendment (2026-09-05): the no-billing bootstrap path
+
+Chosen by the project owner over enabling Blaze. Sub-projects B–D as written
+remain the production design; this amendment is the free path that makes the
+system train and predict TODAY, and it deliberately reuses every contract the
+spec already defines so the Blaze path later replaces plumbing, not shapes.
+
+- **Dataset (B′):** bootstrapped from the Oxford-IIIT Pet dataset rather than
+  user uploads, prepared and split by the `ml/` package (`ml/README.md`). Two
+  demo pets map to their real breeds; Max has no Labrador in that set, so a
+  German Shorthaired Pointer stands in — recorded in `metadata.json`, not
+  hidden. A trained **OTHER** class of unrelated breeds provides genuine
+  unknown-rejection: softmax over only the registered pets must pick one of
+  them for any animal, so §5's protection cannot rest on the threshold alone.
+- **Training (C′):** locally, in `ml/petid/` — plain, pytest-covered modules,
+  exactly the "testable outside a notebook" rule §8 sets. Colab becomes a thin
+  wrapper around them when it is ever needed. Artefacts per §9: `.keras`,
+  `.tflite`, `labels.json`, `metadata.json`, plus a TFJS export.
+- **Inference (D′):** in the browser via TensorFlow.js, loading the model as
+  static files from `/models/<version>/` — there is no Cloud Run without
+  billing, and there is also no ESP32-CAM to call it. `lib/ai/predict.ts`
+  (pure, tested) maps softmax → `Prediction`; it applies NO threshold, so
+  `decideFeeding` keeps the one conversion point §5.2.1 mandates and a weak
+  win is rejected as LOW_AI_CONFIDENCE, the precise reason, not flattened to
+  UNKNOWN. The FastAPI service of §9 becomes the Blaze-path upgrade; its API
+  contract is unchanged by this amendment.
+- **Registry:** `models/{version}` and `system/ai` are written exactly per
+  §5.1 — by the training operator's owner credentials, which is the "training
+  job writes the registry" role. Client rules stay `allow write: if false`.
+  The browser reads a static mirror (`/models/registry.json`) because model
+  files and registry must version together in one deploy.
+- **Verification:** `scripts/verify-model.mjs` runs the exported artefacts
+  through the same TFJS runtime the browser uses, against held-out test
+  images, with a hard accuracy floor — the export step is asserted, not
+  eyeballed.
+
+What this amendment does NOT change: the decision engine and its check order,
+the Firestore rules, the household scoping, the two-confidence-scales rule,
+or the §42 caveat that the full end-to-end scenario still needs hardware.
+
 ## 15. What this design refuses to do
 
 - **No bounding boxes.** MobileNetV2 classification produces no localisation. The brief says

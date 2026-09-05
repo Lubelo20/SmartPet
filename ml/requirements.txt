@@ -1,0 +1,12 @@
+# The resolver cannot solve tensorflowjs+tensorflow cleanly (it loops for
+# 20+ minutes re-pinning TF). Install in THIS order, exactly as below:
+#   pip install "tensorflow==2.19.*" pillow pytest
+#   pip install --no-deps tensorflowjs==4.22.0 tensorflow_hub==0.16.1 \
+#       tensorflow_decision_forests ydf wurlitzer packaging importlib_resources
+#   pip install "protobuf==6.31.1"
+# protobuf must be >= the decision-forests gencode (6.31) while staying
+# inside tensorflow's accepted range; 6.31.1 satisfies both.
+tensorflow==2.19.*
+pillow
+pytest
+tensorflowjs==4.22.0

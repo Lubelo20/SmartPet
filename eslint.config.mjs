@@ -30,6 +30,11 @@ const eslintConfig = [
       "next-env.d.ts",
       // Git-ignored scratch worktrees — not this project's source.
       ".claude/**",
+      // The Python training pipeline. Its virtualenv contains vendored JS
+      // (TensorBoard) that eslint would otherwise crawl into.
+      "ml/**",
+      // Trained model artefacts served statically.
+      "public/models/**",
     ],
   },
 ];
