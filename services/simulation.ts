@@ -326,10 +326,21 @@ export class SimulationEngine {
         if (this.fired.has(key) || !isDue(sch, at)) continue;
 
         const pet = this.pets.find((p) => p.id === sch.petId);
-        if (!pet) continue;
 
         // Claim it before acting, so a refusal is not retried every 400 ms.
         this.fired.add(key);
+
+        // A schedule whose pet was deleted. `continue` here used to leave the
+        // key unclaimed, so the schedule was re-evaluated every tick and the
+        // owner was never told the meal would not happen. A skipped meal must
+        // never be silent — the same rule the paused case follows.
+        if (!pet) {
+          this.emit({
+            kind: "schedule:skipped", scheduleId: sch.id, petId: sch.petId,
+            time: sch.time, reason: "pet-missing",
+          });
+          break;
+        }
 
         // "Paused" is the owner's plainest "stop feeding this animal" control.
         // The manual path refuses via `decideFeeding` (FEEDING_DISABLED); the

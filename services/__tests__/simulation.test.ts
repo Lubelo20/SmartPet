@@ -363,6 +363,40 @@ describe("SimulationEngine — scheduled feeding", () => {
     h.engine.stop();
   });
 
+  it("skips and reports a schedule whose pet no longer exists", () => {
+    // A deleted pet's schedule used to be silently re-evaluated every tick and
+    // the owner was never told that meal would not happen — the mirror of the
+    // paused case. The skip must be claimed and announced exactly once.
+    at(2026, 7, 24, 6, 29);
+    const h = harness();
+    h.engine.setPets([]);
+    h.engine.setSchedules([sched()]);
+
+    at(2026, 7, 24, 6, 30);
+    vi.advanceTimersByTime(2_000);
+
+    expect(h.store.get().cycle.active).toBe(false);
+    expect(h.events.some((e) => e.kind === "cycle:start")).toBe(false);
+    expect(h.events.find((e) => e.kind === "schedule:skipped")).toEqual({
+      kind: "schedule:skipped", scheduleId: "SCH001", petId: "PET009",
+      time: "06:30", reason: "pet-missing",
+    });
+    h.engine.stop();
+  });
+
+  it("does not retry a schedule skipped for a missing pet", () => {
+    at(2026, 7, 24, 6, 29);
+    const h = harness();
+    h.engine.setPets([]);
+    h.engine.setSchedules([sched()]);
+
+    at(2026, 7, 24, 6, 30);
+    vi.advanceTimersByTime(60_000);
+
+    expect(h.events.filter((e) => e.kind === "schedule:skipped").length).toBe(1);
+    h.engine.stop();
+  });
+
   it("does not retry a schedule skipped for a paused pet", () => {
     at(2026, 7, 24, 6, 29);
     const h = harness();

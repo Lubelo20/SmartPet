@@ -64,8 +64,11 @@ export type EngineEvent =
   | { kind: "sensor:error" }
   | {
       kind: "schedule:skipped"; scheduleId: string; petId: string; time: string;
-      /** Why the device held the portion back. "pet-paused" mirrors FEEDING_DISABLED. */
-      reason: "daily-limit" | "pet-paused";
+      /**
+       * Why the device held the portion back. "pet-paused" mirrors
+       * FEEDING_DISABLED; "pet-missing" is a schedule whose pet was deleted.
+       */
+      reason: "daily-limit" | "pet-paused" | "pet-missing";
     };
 
 /** Describes the feeder itself — shared by every member of the household. */

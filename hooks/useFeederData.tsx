@@ -59,6 +59,11 @@ export type FeederData = {
 
 const FeederDataCtx = createContext<FeederData | null>(null);
 
+// A literal, so module scope is safe (the hydration rule bans module-scope
+// *clocks*, not constants). Living here rather than in the component keeps it
+// out of every useCallback dependency question.
+const TELEGRAM_COOLDOWN_MS = 5 * 60 * 1000;
+
 export function useFeederData(): FeederData {
   const ctx = useContext(FeederDataCtx);
   if (!ctx) throw new Error("useFeederData must be used within a FeederDataProvider");
@@ -152,7 +157,6 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
    * the bot, and a muted bot reports nothing at all.
    */
   const lastSentAt = useRef<Record<string, number>>({});
-  const TELEGRAM_COOLDOWN_MS = 5 * 60 * 1000;
 
   // Last feed per pet that actually put food in the bowl, for the cooldown.
   // Written only from `cycle:complete` (below), never when a command is merely
@@ -255,6 +259,9 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
         const [alertText, toastText] = evt.reason === "pet-paused"
           ? [`${name} is paused, so the scheduled portion was not dispensed. Set the pet back to Active to resume feeding.`,
              `${shortName} is paused, so the ${evt.time} portion was held back.`]
+          : evt.reason === "pet-missing"
+          ? [`This schedule belongs to a pet that no longer exists, so the portion was not dispensed. Delete the schedule to stop these notices.`,
+             `The ${evt.time} schedule has no pet, so the portion was held back.`]
           : [`${name} has already reached the daily maximum, so the scheduled portion was not dispensed.`,
              `${shortName} is at the daily maximum, so the ${evt.time} portion was held back.`];
         raiseAlert("warning", "Feeding skipped", `The ${evt.time} feeding was skipped`, alertText, "Scheduler");
