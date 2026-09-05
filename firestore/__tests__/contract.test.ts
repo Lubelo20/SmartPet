@@ -207,3 +207,33 @@ describe.each(cases)("$name adapter satisfies the contract", ({ make }) => {
     expect((await svc.settings.get()).feedCooldownS).toBe(600);
   });
 });
+
+/**
+ * Firebase-only, because the shape under test is storage history: a
+ * settings/device document written before feedCooldownS existed. The mock
+ * adapter has the mirror of this test against a legacy localStorage blob
+ * (lib/__tests__/mock-settings-persistence.test.ts). If the defaults-first
+ * spread in settings.get() is ever lost, feedCooldownS reads undefined,
+ * `undefined > 0` is false, and the cooldown silently stops governing —
+ * fail-open, with no error anywhere.
+ */
+describe("firebase adapter with a settings document that predates feedCooldownS", () => {
+  it("fills the missing field with the default and keeps the stored values", async () => {
+    const db = await seedFirestore();
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), "households", HID, "settings", "device"), {
+        deviceName: "Legacy Feeder", timezone: "Africa/Johannesburg", unit: "g",
+        defaultPortion: 90, maxDaily: 500, confidenceThreshold: 80,
+        // deliberately no feedCooldownS
+      });
+    });
+
+    const svc = createFirebaseAdapter(db, HID, UID);
+    const settings = await svc.settings.get();
+
+    expect(settings.deviceName).toBe("Legacy Feeder");
+    expect(settings.maxDaily).toBe(500);
+    expect(settings.feedCooldownS).toBe(300);
+    expect(settings.feedCooldownS).not.toBeUndefined();
+  });
+});
