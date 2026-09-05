@@ -1,0 +1,22 @@
+{
+  "0": {
+    "petId": "PET001",
+    "petName": "Max",
+    "species": "Dog"
+  },
+  "1": {
+    "petId": "PET002",
+    "petName": "Bella",
+    "species": "Dog"
+  },
+  "2": {
+    "petId": "PET003",
+    "petName": "Simba",
+    "species": "Cat"
+  },
+  "3": {
+    "petId": null,
+    "petName": "Unknown",
+    "species": null
+  }
+}
