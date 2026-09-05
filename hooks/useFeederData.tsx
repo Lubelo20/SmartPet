@@ -6,8 +6,8 @@ import { useToast } from "@/hooks/useToast";
 import { CONFIG } from "@/lib/config";
 import { toFeederError } from "@/lib/errors";
 import type {
-  Alert, AlertSeverity, EngineEvent, FeedingRecord, HouseholdMember, Invite, NewPet, Pet,
-  Schedule, Settings, Telemetry,
+  Alert, AlertSeverity, Detection, EngineEvent, FeedingRecord, HouseholdMember, Invite, NewPet,
+  Pet, Prediction, Schedule, Settings, Telemetry,
 } from "@/lib/types";
 import { decideFeeding } from "@/lib/decision";
 import { rejectionMessage } from "@/lib/decision-messages";
@@ -36,6 +36,10 @@ export type FeederData = {
   reload: () => Promise<void>;
   requestFeed: (pet: Pet) => void;
   dispense: (pet: Pet, portionG: number) => Promise<void>;
+  /** Persist one AI sighting from the camera loop. Fire-and-forget. */
+  recordDetection: (p: Prediction) => void;
+  /** Run the decision engine on an AI identification; feed only if it approves. */
+  aiFeed: (p: Prediction) => Promise<void>;
   stopCycle: () => Promise<void>;
   sendCommand: (type: CommandType, payload: unknown, title: string, message: string) => Promise<void>;
   createPet: (values: NewPet) => Promise<void>;
@@ -276,6 +280,52 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
     }
   }), [pets, toast, notify, raiseAlert, engine, services, telemetry, reportWriteFailure]);
 
+  const recordDetection = useCallback((p: Prediction) => {
+    const pet = p.petId ? pets.find((x) => x.id === p.petId) ?? null : null;
+    const row: Detection = {
+      id: uid("DET"), deviceId: t.device.id, timestamp: Date.now(),
+      petId: p.petId, petName: pet?.name ?? "Unknown",
+      confidence: p.confidence, status: p.status, modelVersion: p.modelVersion,
+    };
+    void services.detections.append(row)
+      .catch(reportWriteFailure("Detection not saved", "The sighting was not recorded."));
+  }, [pets, t.device.id, services, reportWriteFailure]);
+
+  // The AI path through the same engine as manual feeding. The identification
+  // alone never feeds: decideFeeding rules, and its refusal is shown verbatim.
+  const aiFeed = useCallback(async (p: Prediction) => {
+    const now = Date.now();
+    const pet = p.petId ? pets.find((x) => x.id === p.petId) ?? null : null;
+    const requestedG = pet?.portionG ?? settings.defaultPortion;
+
+    const verdict = decideFeeding({
+      now,
+      trigger: "AI",
+      prediction: p,
+      pet,
+      settings,
+      telemetry: { device: t.device, hopper: t.hopper },
+      schedules,
+      todaysFeedings: feedings,
+      lastFeedAt: lastFeedAtRef.current,
+      requestedG,
+    });
+
+    if (verdict.decision === "REJECTED") {
+      const { title, message } = rejectionMessage(verdict.reason, { petName: pet?.name ?? "This animal" });
+      toast({ tone: "warning", title, message });
+      return;
+    }
+
+    try {
+      // The engine's approved amount, not the raw request: what it ruled on
+      // is what gets dispensed.
+      await commandBus.send("feeding.start", { petId: verdict.petId, portionG: verdict.amountG, trigger: "AI" });
+    } catch (e) {
+      toast({ tone: "critical", title: "Feeding failed", message: errorMessage(e, "The feeding command failed.") });
+    }
+  }, [commandBus, toast, feedings, settings, schedules, t, pets]);
+
   const dispense = useCallback(async (pet: Pet, portionG: number) => {
     if (!pet) return;
     const now = Date.now();
@@ -398,7 +448,7 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
 
   const value: FeederData = {
     telemetry: t, pets, feedings, schedules, alerts, loading, loadError,
-    reload: load, requestFeed, dispense, stopCycle, sendCommand,
+    reload: load, requestFeed, dispense, recordDetection, aiFeed, stopCycle, sendCommand,
     createPet, updatePet, deletePet, toggleSchedule,
     markAlertRead, markAllAlertsRead, settings, saveSettings,
     householdName, members, invites, inviteMember, revokeInvite,

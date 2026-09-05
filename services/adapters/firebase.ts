@@ -4,13 +4,13 @@ import {
 } from "firebase/firestore";
 import { toFeederError } from "@/lib/errors";
 import {
-  alertFromDoc, alertToDoc, feedingFromDoc, feedingToDoc,
-  petFromDoc, petToDoc, scheduleFromDoc, scheduleToDoc,
+  alertFromDoc, alertToDoc, detectionFromDoc, detectionToDoc, feedingFromDoc,
+  feedingToDoc, petFromDoc, petToDoc, scheduleFromDoc, scheduleToDoc,
 } from "@/lib/firebase/mapping";
 import { buildSeedSettings } from "@/lib/seed-data";
 import { DEFAULT_NOTIFICATIONS } from "@/lib/notifications";
 import type {
-  Alert, DeviceSettings, FeedingRecord, Invite, NewPet, NewSchedule,
+  Alert, Detection, DeviceSettings, FeedingRecord, Invite, NewPet, NewSchedule,
   NotificationSettings, Pet, Settings,
 } from "@/lib/types";
 import type { FeederServices } from "@/services/contract";
@@ -65,6 +65,16 @@ export function createFirebaseAdapter(db: Firestore, hid: string, uid: string): 
       }),
       append: (row: FeedingRecord) => guard("Could not record the feeding.", async () => {
         await addDoc(col("feedingHistory"), feedingToDoc(row));
+        return row;
+      }),
+    },
+    detections: {
+      list: () => guard("Could not load the detection log.", async () => {
+        const snap = await getDocs(query(col("detections"), orderBy("timestamp", "desc")));
+        return snap.docs.map((d) => detectionFromDoc(d.id, d.data()));
+      }),
+      append: (row: Detection) => guard("Could not record the detection.", async () => {
+        await setDoc(ref("detections", row.id), detectionToDoc(row));
         return row;
       }),
     },

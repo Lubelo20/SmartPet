@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { Timestamp } from "firebase/firestore";
 import {
-  alertFromDoc, alertToDoc, feedingFromDoc, feedingToDoc,
-  petFromDoc, petToDoc, scheduleFromDoc, scheduleToDoc,
+  alertFromDoc, alertToDoc, detectionFromDoc, detectionToDoc, feedingFromDoc,
+  feedingToDoc, petFromDoc, petToDoc, scheduleFromDoc, scheduleToDoc,
 } from "@/lib/firebase/mapping";
-import type { Alert, FeedingRecord, Pet, Schedule } from "@/lib/types";
+import type { Alert, Detection, FeedingRecord, Pet, Schedule } from "@/lib/types";
 
 const pet: Pet = {
   id: "PET001", name: "Max", species: "Dog", breed: "Labrador Retriever", weightKg: 24,
@@ -87,5 +87,35 @@ describe("timestamp mapping", () => {
     // special-case.
     const round = petFromDoc(pet.id, { ...petToDoc(pet), photoData: "" });
     expect("photoData" in round).toBe(false);
+  });
+});
+
+describe("detection mapping", () => {
+  const det: Detection = {
+    id: "DET001", deviceId: "ESP32-PETFEEDER-001", timestamp: 1_788_600_000_000,
+    petId: "PET001", petName: "Max", confidence: 0.964,
+    status: "RECOGNIZED", modelVersion: "v1.0",
+  };
+
+  it("round-trips a recognised detection through a Firestore Timestamp", () => {
+    const doc = detectionToDoc(det);
+    expect(doc.timestamp).toBeInstanceOf(Timestamp);
+    expect("id" in doc).toBe(false);
+    expect(detectionFromDoc(det.id, doc)).toEqual(det);
+  });
+
+  it("round-trips an unknown detection with its null petId intact", () => {
+    const unknown: Detection = {
+      ...det, petId: null, petName: "Unknown", confidence: 0.42, status: "UNKNOWN",
+    };
+    const back = detectionFromDoc(unknown.id, detectionToDoc(unknown));
+    expect(back.petId).toBeNull();
+    expect(back.status).toBe("UNKNOWN");
+  });
+
+  it("keeps confidence on the 0..1 scale with no rescaling", () => {
+    // The one place 0..1 meets 0..100 is decideFeeding — never the mapping.
+    const back = detectionFromDoc(det.id, detectionToDoc(det));
+    expect(back.confidence).toBeCloseTo(0.964);
   });
 });

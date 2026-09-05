@@ -1,5 +1,5 @@
 import { Timestamp } from "firebase/firestore";
-import type { Alert, AlertSeverity, FeedingRecord, Pet, PetColour, Schedule } from "@/lib/types";
+import type { Alert, AlertSeverity, Detection, FeedingRecord, Pet, PetColour, Schedule } from "@/lib/types";
 
 /**
  * The only module in the app where `Timestamp` exists. Everything above this
@@ -40,6 +40,27 @@ export function petFromDoc(id: string, data: Record<string, unknown>): Pet {
     // component ever has to distinguish an empty photo from a missing one.
     ...(data.photoData ? { photoData: String(data.photoData) } : {}),
     enrolledAt: String(data.enrolledAt),
+  };
+}
+
+/* ---------------- Detections ---------------- */
+
+export function detectionToDoc(row: Detection): Record<string, unknown> {
+  const { id: _id, timestamp, ...rest } = row;
+  return { ...rest, timestamp: Timestamp.fromMillis(timestamp) };
+}
+
+export function detectionFromDoc(id: string, data: Record<string, unknown>): Detection {
+  return {
+    id,
+    deviceId: String(data.deviceId),
+    timestamp: toMillis(data.timestamp),
+    petId: data.petId === null || data.petId === undefined ? null : String(data.petId),
+    petName: String(data.petName),
+    confidence: Number(data.confidence),
+    status: data.status as Detection["status"],
+    modelVersion: data.modelVersion === null || data.modelVersion === undefined
+      ? null : String(data.modelVersion),
   };
 }
 

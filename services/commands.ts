@@ -16,7 +16,7 @@ export function createCommandBus(telemetry: TelemetryStore, engine: SimulationEn
       if (!s.device.online) throw new Error("Unable to reach the feeder. Check the device connection.");
       switch (type) {
         case "feeding.start": {
-          const p = payload as { petId: string; portionG: number; trigger?: "Manual" | "Scheduled" };
+          const p = payload as { petId: string; portionG: number; trigger?: "Manual" | "Scheduled" | "AI" };
           const ok = engine.startCycle(p.petId, p.portionG, p.trigger || "Manual");
           if (!ok) throw new Error("A feeding cycle is already running.");
           return { accepted: true };

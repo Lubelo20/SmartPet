@@ -22,7 +22,7 @@ export type ActiveModel = {
   version: string;
   labels: ModelLabels;
   metadata: Record<string, unknown>;
-  predict(source: HTMLImageElement | HTMLCanvasElement | ImageData): Promise<Prediction>;
+  predict(source: HTMLImageElement | HTMLCanvasElement | HTMLVideoElement | ImageData): Promise<Prediction>;
   dispose(): void;
 };
 

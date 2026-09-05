@@ -2,6 +2,7 @@
 
 import { CameraPreview } from "@/components/feeder/CameraPreview";
 import { FeedingWorkflow } from "@/components/feeder/FeedingWorkflow";
+import { LiveIdentification } from "@/components/feeder/LiveIdentification";
 import { PetDetectionPanel } from "@/components/feeder/PetDetectionPanel";
 import { ReadoutRow } from "@/components/feeder/ReadoutRow";
 import { WeightMonitor } from "@/components/feeder/WeightMonitor";
@@ -36,6 +37,7 @@ export default function LivePage() {
           </Card>
         </div>
         <div className="space-y-5">
+          <LiveIdentification />
           <PetDetectionPanel detection={t.detection} pet={pet} />
           <Card className="p-5">
             <SectionHead title="Cycle control" subtitle="Commands are queued to the device" />

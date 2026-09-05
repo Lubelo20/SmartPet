@@ -198,6 +198,24 @@ describe.each(cases)("$name adapter satisfies the contract", ({ make }) => {
     expect((await svc.alerts.list()).length).toBe(before + 1);
   });
 
+  it("appends and lists detections, newest first", async () => {
+    const base = {
+      deviceId: "ESP32-PETFEEDER-001", petName: "Max", confidence: 0.96,
+      status: "RECOGNIZED" as const, modelVersion: "v1.0",
+    };
+    await svc.detections.append({ ...base, id: "DET001", petId: "PET001", timestamp: 1_000 });
+    await svc.detections.append({
+      ...base, id: "DET002", petId: null, petName: "Unknown",
+      confidence: 0.42, status: "UNKNOWN", timestamp: 2_000,
+    });
+
+    const rows = await svc.detections.list();
+    expect(rows.map((d) => d.id)).toEqual(["DET002", "DET001"]);
+    expect(rows[0].petId).toBeNull();
+    expect(rows[0].confidence).toBeCloseTo(0.42);
+    expect(rows[1].petId).toBe("PET001");
+  });
+
   it("round-trips a pet photo and clears it with the empty-string sentinel", async () => {
     const created = await svc.pets.create({ ...newPet, photoData: "data:image/jpeg;base64,AAAA" });
     expect(created.photoData).toBe("data:image/jpeg;base64,AAAA");

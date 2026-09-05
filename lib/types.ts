@@ -19,7 +19,8 @@ export type NewPet = Omit<Pet, "id" | "enrolledAt"> & { id?: string };
 export type FeedingRecord = {
   id: string; timestamp: number; petId: string; targetG: number; actualG: number;
   status: "Completed" | "Under-dispensed" | "Low confidence";
-  confidence: number; trigger: "Manual" | "Scheduled"; durationS: number;
+  /** "AI" appears once camera-triggered feeding exists; see FeedTrigger. */
+  confidence: number; trigger: "Manual" | "Scheduled" | "AI"; durationS: number;
   /** True while the device is simulated. Real telemetry writes false. */
   simulated: boolean;
 };
@@ -146,6 +147,17 @@ export type RejectionReason =
 
 /** What asked for this feed. AI checks apply only to "AI". */
 export type FeedTrigger = "Manual" | "Scheduled" | "AI";
+
+/**
+ * One AI sighting, recorded whenever the camera loop settles on an identity
+ * (spec §5.2). `confidence` is 0..1 — the wire scale; it meets the stored
+ * 0..100 threshold only inside decideFeeding.
+ */
+export type Detection = {
+  id: string; deviceId: string; timestamp: number;
+  petId: string | null; petName: string; confidence: number;
+  status: DetectionStatus; modelVersion: string | null;
+};
 
 /** A model's answer. `confidence` is 0..1 — see the decision engine for the one place it meets the 0..100 threshold. */
 export type Prediction = {

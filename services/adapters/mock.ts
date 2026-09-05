@@ -1,4 +1,5 @@
 import type {
+  Detection,
   Alert, FeedingRecord, HouseholdMember, Invite, NewPet, NewSchedule, Pet, Schedule, Settings,
 } from "@/lib/types";
 import { buildSeedAlerts, buildSeedFeedings, buildSeedPets, buildSeedSchedules, buildSeedSettings } from "@/lib/seed-data";
@@ -47,6 +48,9 @@ export function createMockAdapter(): FeederServices {
   const store = {
     pets: buildSeedPets(),
     feedings: buildSeedFeedings(),
+    // No seeded detections: the camera loop is the only writer, and a demo
+    // that claims sightings which never happened would be a lie.
+    detections: [] as Detection[],
     schedules: buildSeedSchedules(),
     alerts: buildSeedAlerts(),
     settings: loadStoredSettings() ?? buildSeedSettings(),
@@ -110,6 +114,17 @@ export function createMockAdapter(): FeederServices {
       },
       async append(row: FeedingRecord) {
         store.feedings = [row, ...store.feedings];
+        return row;
+      },
+    },
+    detections: {
+      async list() {
+        await latency();
+        return [...store.detections].sort((a, b) => b.timestamp - a.timestamp);
+      },
+      async append(row: Detection) {
+        await latency();
+        store.detections = [row, ...store.detections];
         return row;
       },
     },

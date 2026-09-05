@@ -146,7 +146,7 @@ export class SimulationEngine {
     this.emit({ kind: "demo", on });
   }
 
-  startCycle(petId: string, targetG: number, trigger: "Manual" | "Scheduled" = "Manual"): boolean {
+  startCycle(petId: string, targetG: number, trigger: "Manual" | "Scheduled" | "AI" = "Manual"): boolean {
     const s = this.store.get();
     if (s.cycle.active || !s.device.online) return false;
     this.phaseEnd = Date.now() + 1600;

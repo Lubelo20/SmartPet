@@ -1,5 +1,6 @@
 import type {
-  Alert, FeedingRecord, HouseholdMember, Invite, NewPet, NewSchedule, Pet, Schedule, Settings,
+  Alert, Detection, FeedingRecord, HouseholdMember, Invite, NewPet, NewSchedule, Pet, Schedule,
+  Settings,
 } from "@/lib/types";
 
 export interface FeederServices {
@@ -13,6 +14,11 @@ export interface FeederServices {
   feedings: {
     list(): Promise<FeedingRecord[]>;
     append(row: FeedingRecord): Promise<FeedingRecord>;
+  };
+  /** AI sightings from the camera loop. Newest first, like feedings. */
+  detections: {
+    list(): Promise<Detection[]>;
+    append(row: Detection): Promise<Detection>;
   };
   schedules: {
     list(): Promise<Schedule[]>;
