@@ -70,4 +70,22 @@ describe("timestamp mapping", () => {
     const doc = petToDoc({ ...pet, note: undefined });
     expect("note" in doc).toBe(false);
   });
+
+  it("round-trips a photo and omits the key when there is none", () => {
+    const withPhoto = { ...pet, photoData: "data:image/jpeg;base64,AAAA" };
+    expect(petFromDoc(pet.id, petToDoc(withPhoto))).toEqual(withPhoto);
+
+    // Firestore rejects undefined, so an absent photo must be omitted, not
+    // written as undefined.
+    const doc = petToDoc({ ...pet, photoData: undefined });
+    expect("photoData" in doc).toBe(false);
+  });
+
+  it("reads an empty-string photo as no photo at all", () => {
+    // "" is the explicit removal value (updateDoc cannot carry undefined), and
+    // it must come back as an absent field, not an empty photo the UI has to
+    // special-case.
+    const round = petFromDoc(pet.id, { ...petToDoc(pet), photoData: "" });
+    expect("photoData" in round).toBe(false);
+  });
 });

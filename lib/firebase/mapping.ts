@@ -19,8 +19,14 @@ const toMillis = (v: unknown): number =>
 /* ---------------- Pets ---------------- */
 
 export function petToDoc(pet: Pet): Record<string, unknown> {
-  const { id: _id, note, ...rest } = pet;
-  return note === undefined ? { ...rest } : { ...rest, note };
+  // Optional fields are omitted rather than written: Firestore rejects
+  // undefined outright.
+  const { id: _id, note, photoData, ...rest } = pet;
+  return {
+    ...rest,
+    ...(note === undefined ? {} : { note }),
+    ...(photoData === undefined ? {} : { photoData }),
+  };
 }
 
 export function petFromDoc(id: string, data: Record<string, unknown>): Pet {
@@ -30,6 +36,9 @@ export function petFromDoc(id: string, data: Record<string, unknown>): Pet {
     weightKg: Number(data.weightKg), portionG: Number(data.portionG), mealsPerDay: Number(data.mealsPerDay),
     status: data.status as Pet["status"], colour: data.colour as PetColour,
     ...(data.note === undefined ? {} : { note: String(data.note) }),
+    // "" is the stored removal value; it reads back as no photo at all, so no
+    // component ever has to distinguish an empty photo from a missing one.
+    ...(data.photoData ? { photoData: String(data.photoData) } : {}),
     enrolledAt: String(data.enrolledAt),
   };
 }

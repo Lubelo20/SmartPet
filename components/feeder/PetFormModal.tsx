@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
+import { resizePetPhoto } from "@/lib/image";
+import { toFeederError } from "@/lib/errors";
 import type { NewPet, Pet, PetColour } from "@/lib/types";
 
 type PetFormModalProps = {
@@ -25,22 +27,29 @@ type PetFormState = {
   status: Pet["status"];
   colour: PetColour;
   note: string;
+  /** JPEG data URL, "" when there is no photo. */
+  photoData: string;
 };
 
 const DEFAULT_FORM: PetFormState = {
   name: "", species: "Dog", breed: "",
   weightKg: "", portionG: "120", mealsPerDay: "3",
-  status: "Active", colour: "violet", note: "",
+  status: "Active", colour: "violet", note: "", photoData: "",
 };
 
 export function PetFormModal({ open, pet, onClose, onSubmit }: PetFormModalProps) {
   const [form, setForm] = useState<PetFormState>(DEFAULT_FORM);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const fileInput = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
     setForm({
       name: pet?.name || "", species: pet?.species || "Dog", breed: pet?.breed || "",
       weightKg: pet?.weightKg ? String(pet.weightKg) : "", portionG: String(pet?.portionG || 120), mealsPerDay: String(pet?.mealsPerDay || 3),
       status: pet?.status || "Active", colour: pet?.colour || "violet", note: pet?.note || "",
+      photoData: pet?.photoData || "",
     });
+    setPhotoError(null);
   }, [pet, open]);
   const set = <K extends keyof PetFormState>(k: K) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value as PetFormState[K] }));
@@ -52,8 +61,11 @@ export function PetFormModal({ open, pet, onClose, onSubmit }: PetFormModalProps
       onClose={onClose}
       footer={<>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button disabled={!valid} onClick={() => onSubmit({
+        <Button disabled={!valid || photoBusy} onClick={() => onSubmit({
           ...form, weightKg: Number(form.weightKg), portionG: Number(form.portionG), mealsPerDay: Number(form.mealsPerDay),
+          // "" is only meaningful as "clear an existing photo"; on create it
+          // would be stored verbatim by one adapter and dropped by the other.
+          photoData: form.photoData || (pet?.photoData ? "" : undefined),
         })}>{pet && pet.id ? "Save changes" : "Add pet"}</Button>
       </>}>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -74,6 +86,44 @@ export function PetFormModal({ open, pet, onClose, onSubmit }: PetFormModalProps
             <option value="violet">Violet</option><option value="rose">Rose</option>
           </Select>
         </Field>
+        <div className="sm:col-span-2">
+          <Field label="Photo" hint="Stored with the pet now; later it seeds the camera's recognition training.">
+            <div className="flex items-center gap-3">
+              {form.photoData ? (
+                /* eslint-disable-next-line @next/next/no-img-element -- a data URL; next/image adds nothing here */
+                <img src={form.photoData} alt={form.name ? `${form.name}'s photo` : "Pet photo"} className="h-14 w-14 rounded-2xl object-cover" />
+              ) : (
+                <div className="h-14 w-14 rounded-2xl bg-canvas border border-line" />
+              )}
+              <input
+                ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  setPhotoBusy(true); setPhotoError(null);
+                  try {
+                    const url = await resizePetPhoto(file);
+                    setForm((f) => ({ ...f, photoData: url }));
+                  } catch (err) {
+                    setPhotoError(toFeederError(err, "That photo could not be used.").message);
+                  } finally {
+                    setPhotoBusy(false);
+                  }
+                }}
+              />
+              <Button variant="ghost" disabled={photoBusy} onClick={() => fileInput.current?.click()}>
+                {photoBusy ? "Processing…" : form.photoData ? "Replace photo" : "Upload photo"}
+              </Button>
+              {form.photoData && (
+                <Button variant="ghost" disabled={photoBusy} onClick={() => setForm((f) => ({ ...f, photoData: "" }))}>
+                  Remove
+                </Button>
+              )}
+            </div>
+            {photoError && <p className="text-sm text-rose-600 mt-2">{photoError}</p>}
+          </Field>
+        </div>
         <div className="sm:col-span-2">
           <Field label="Feeding note" hint="Shown on the pet profile"><Input value={form.note || ""} onChange={set("note")} placeholder="Eats fast — reduce servo speed." /></Field>
         </div>

@@ -83,7 +83,16 @@ export function createMockAdapter(): FeederServices {
       },
       async update(id: string, patch: Partial<Pet>) {
         await latency();
-        store.pets = store.pets.map((p) => (p.id === id ? { ...p, ...patch } : p));
+        store.pets = store.pets.map((p) => {
+          if (p.id !== id) return p;
+          const next = { ...p, ...patch };
+          // "" is the photo-removal sentinel (updateDoc cannot carry
+          // undefined). The Firebase adapter's petFromDoc reads "" back as no
+          // photo at all; dropping the key here keeps the adapters
+          // indistinguishable to the contract suite.
+          if (next.photoData === "") delete next.photoData;
+          return next;
+        });
         const next = store.pets.find((p) => p.id === id);
         if (!next) throw new FeederError("not-found", "That pet no longer exists.");
         return next;

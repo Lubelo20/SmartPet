@@ -4,6 +4,15 @@ export type Pet = {
   id: string; name: string; species: "Dog" | "Cat"; breed: string;
   weightKg: number; portionG: number; mealsPerDay: number;
   status: "Active" | "Paused"; colour: PetColour; note?: string; enrolledAt: string;
+  /**
+   * Profile photo as a JPEG data URL, capped by lib/image.ts so the pet
+   * document stays far from Firestore's 1 MiB limit. Inline because Firebase
+   * Storage needs the Blaze plan; when Storage arrives this migrates to a
+   * `photoPath` Storage reference (see the AI design spec §4.2). Absent or ""
+   * means no photo — "" is the explicit removal value, because updateDoc
+   * cannot carry undefined.
+   */
+  photoData?: string;
 };
 export type NewPet = Omit<Pet, "id" | "enrolledAt"> & { id?: string };
 

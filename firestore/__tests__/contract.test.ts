@@ -198,6 +198,18 @@ describe.each(cases)("$name adapter satisfies the contract", ({ make }) => {
     expect((await svc.alerts.list()).length).toBe(before + 1);
   });
 
+  it("round-trips a pet photo and clears it with the empty-string sentinel", async () => {
+    const created = await svc.pets.create({ ...newPet, photoData: "data:image/jpeg;base64,AAAA" });
+    expect(created.photoData).toBe("data:image/jpeg;base64,AAAA");
+    expect((await svc.pets.get(created.id))?.photoData).toBe("data:image/jpeg;base64,AAAA");
+
+    // "" is the removal value (updateDoc cannot carry undefined). It must read
+    // back as NO photo, not as an empty one.
+    await svc.pets.update(created.id, { photoData: "" });
+    const cleared = await svc.pets.get(created.id);
+    expect(cleared?.photoData ?? undefined).toBeUndefined();
+  });
+
   it("round-trips feedCooldownS through the adapter", async () => {
     const before = await svc.settings.get();
     expect(typeof before.feedCooldownS).toBe("number");
