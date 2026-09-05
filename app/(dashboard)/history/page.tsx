@@ -17,6 +17,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Input, inputCls } from "@/components/ui/Input";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { Select } from "@/components/ui/Select";
+import { InsightsCard } from "@/components/feeder/InsightsCard";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useFeederData } from "@/hooks/useFeederData";
 import { PET_HEX } from "@/lib/analytics";
@@ -61,6 +62,7 @@ export default function HistoryPage() {
 
   return (
     <div className="space-y-5">
+      <InsightsCard />
       <div className="flex gap-1 p-1 bg-surface-2 rounded-xl w-full sm:w-auto sm:inline-flex">
         {([["log", "Feeding log"], ["analytics", "Analytics"]] as [Tab, string][]).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
