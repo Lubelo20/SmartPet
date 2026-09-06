@@ -74,6 +74,30 @@ describe("POST /api/insights", () => {
     expect(await res.json()).toEqual({ summary: null, reason: "unreachable" });
   });
 
+  it("refuses to return a summary the model did not finish", async () => {
+    // Gemini spends "thinking" tokens from the same budget as the answer
+    // (measured ~1600 of them for this prompt), so a tight ceiling truncates
+    // mid-sentence. Half a sentence presented as a summary is worse than an
+    // honest failure.
+    vi.stubEnv("GEMINI_API_KEY", KEY);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      candidates: [{ finishReason: "MAX_TOKENS", content: { parts: [{ text: "Bella is trending under her tar" }] } }],
+    }), { status: 200 })));
+
+    const res = await POST(req(goodBody));
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({ summary: null, reason: "truncated" });
+  });
+
+  it("returns a complete summary when the model finished normally", async () => {
+    vi.stubEnv("GEMINI_API_KEY", KEY);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      candidates: [{ finishReason: "STOP", content: { parts: [{ text: "All pets fed on plan." }] } }],
+    }), { status: 200 })));
+
+    expect(await (await POST(req(goodBody))).json()).toEqual({ summary: "All pets fed on plan." });
+  });
+
   it("treats an empty candidates payload as a rejection, not a crash", async () => {
     vi.stubEnv("GEMINI_API_KEY", KEY);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));

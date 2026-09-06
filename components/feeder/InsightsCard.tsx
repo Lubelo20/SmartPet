@@ -19,7 +19,7 @@ export function InsightsCard() {
   const { feedings, pets, alerts } = useFeederData();
   const analytics = useAnalytics(feedings, pets);
   const [summary, setSummary] = useState<string | null>(null);
-  const [state, setState] = useState<"idle" | "busy" | "unconfigured" | "error">("idle");
+  const [state, setState] = useState<"idle" | "busy" | "unconfigured" | "error" | "truncated">("idle");
 
   async function summarise() {
     setState("busy");
@@ -45,7 +45,11 @@ export function InsightsCard() {
         setSummary(data.summary);
         setState("idle");
       } else {
-        setState(data.reason === "not-configured" ? "unconfigured" : "error");
+        setState(
+          data.reason === "not-configured" ? "unconfigured"
+          : data.reason === "truncated" ? "truncated"
+          : "error",
+        );
       }
     } catch {
       setState("error");
@@ -71,6 +75,9 @@ export function InsightsCard() {
         <p className="text-sm text-muted">
           Not configured: add a <span className="font-mono">GEMINI_API_KEY</span> to the server environment to enable summaries.
         </p>
+      )}
+      {state === "truncated" && (
+        <p className="text-sm text-muted">The summary was cut off before it finished. Press Summarise to try again.</p>
       )}
       {state === "error" && (
         <p className="text-sm text-rose-600">The summary service could not be reached. Try again in a moment.</p>

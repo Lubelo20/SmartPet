@@ -56,12 +56,13 @@ export async function POST(request: Request) {
       headers: { "Content-Type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify({
         contents: [{ parts: [{ text: buildInsightsPrompt(input) }] }],
-        // Generous on purpose: Gemini 3.x spends "thinking" tokens from this
-        // same budget — measured at ~500 for a four-sentence summary — so 512
-        // truncated the answer mid-word. Deliberately not using thinkingConfig
-        // to trim that: the field is model-specific and GEMINI_MODEL is
-        // overridable, so a narrower budget is the portable fix.
-        generationConfig: { temperature: 0.4, maxOutputTokens: 2048 },
+        // Gemini 3.x spends "thinking" tokens from this same budget. Measured
+        // over three runs of this prompt: 1551-1648 thinking against 140-164 of
+        // actual answer, so 2048 sat right on the edge and truncated
+        // intermittently in production. 4096 is headroom, not superstition.
+        // Deliberately not trimming thinking with thinkingConfig: that field is
+        // model-specific and GEMINI_MODEL is overridable.
+        generationConfig: { temperature: 0.4, maxOutputTokens: 4096 },
       }),
       // Measured at 19.4s for a four-sentence summary; 20s cut it off at the
       // wire. Generous enough to be the model's answer, short enough that a
@@ -78,9 +79,19 @@ export async function POST(request: Request) {
     }
 
     const data = (await res.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
+      candidates?: { finishReason?: string; content?: { parts?: { text?: string }[] } }[];
     };
-    const text = data.candidates?.[0]?.content?.parts
+    const candidate = data.candidates?.[0];
+
+    // A model that ran out of budget hands back half a sentence. Presenting
+    // that as a summary is worse than saying it failed: the reader cannot tell
+    // the difference between "Bella is trending under her tar" and a real
+    // finding that happens to end there.
+    if (candidate?.finishReason === "MAX_TOKENS") {
+      return NextResponse.json({ summary: null, reason: "truncated" }, { status: 502 });
+    }
+
+    const text = candidate?.content?.parts
       ?.map((p) => p.text ?? "")
       .join("")
       .trim();
