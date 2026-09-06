@@ -21,6 +21,12 @@ export function InsightsCard() {
   const [summary, setSummary] = useState<string | null>(null);
   const [state, setState] = useState<"idle" | "busy" | "unconfigured" | "error" | "truncated">("idle");
 
+  // There is nothing to summarise before the feeder has pets and a feeding.
+  // The route rejects such a payload deliberately — asking a model to describe
+  // an empty record invites it to invent one — so the button must not offer
+  // what the server will refuse.
+  const nothingToSummarise = pets.length === 0 || feedings.length === 0;
+
   async function summarise() {
     setState("busy");
     try {
@@ -62,13 +68,20 @@ export function InsightsCard() {
         title="AI summary"
         subtitle="A plain-language reading of the numbers below, grounded only in this data."
         right={
-          <Button variant="ghost" disabled={state === "busy"} onClick={() => void summarise()}>
+          <Button variant="ghost" disabled={state === "busy" || nothingToSummarise} onClick={() => void summarise()}>
             <Sparkles size={16} /> {state === "busy" ? "Summarising…" : summary ? "Refresh" : "Summarise"}
           </Button>
         }
       />
       {summary && <p className="text-sm text-ink-2 leading-relaxed">{summary}</p>}
-      {!summary && state === "idle" && (
+      {nothingToSummarise && (
+        <p className="text-sm text-muted">
+          {pets.length === 0
+            ? "Add a pet and record a feeding, and this will explain how feeding is going."
+            : "No feedings yet. Once the feeder dispenses, this will explain how feeding is going."}
+        </p>
+      )}
+      {!summary && !nothingToSummarise && state === "idle" && (
         <p className="text-sm text-muted">Press Summarise to have the recent feeding record explained in a few sentences.</p>
       )}
       {state === "unconfigured" && (
@@ -79,7 +92,7 @@ export function InsightsCard() {
       {state === "truncated" && (
         <p className="text-sm text-muted">The summary was cut off before it finished. Press Summarise to try again.</p>
       )}
-      {state === "error" && (
+      {state === "error" && !nothingToSummarise && (
         <p className="text-sm text-rose-600">The summary service could not be reached. Try again in a moment.</p>
       )}
     </Card>
