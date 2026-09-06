@@ -34,12 +34,14 @@ export function Modal({ open, title, description, onClose, children, footer, wid
    * null until measured, and on browsers without the API, so the CSS fallback
    * (inset-0) applies untouched.
    */
-  const [visualHeight, setVisualHeight] = useState<number | null>(null);
+  // offsetTop as well as height: iOS scrolls the layout viewport under the
+  // keyboard, and a dialog fixed at top:0 would have its header scrolled off.
+  const [visual, setVisual] = useState<{ height: number; top: number } | null>(null);
   useEffect(() => {
     if (!open) return;
     const vv = typeof window === "undefined" ? null : window.visualViewport;
     if (!vv) return;
-    const update = () => setVisualHeight(vv.height);
+    const update = () => setVisual({ height: vv.height, top: vv.offsetTop });
     update();
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);
@@ -97,7 +99,7 @@ export function Modal({ open, title, description, onClose, children, footer, wid
   return (
     <div
       className="fixed inset-x-0 top-0 bottom-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
-      style={visualHeight === null ? undefined : { height: visualHeight, bottom: "auto" }}
+      style={visual === null ? undefined : { height: visual.height, top: visual.top, bottom: "auto" }}
     >
       {/* Decorative: closing is also on Escape and the labelled close button,
           so this does not need to be a keyboard target of its own. */}

@@ -19,6 +19,9 @@ const source = readFileSync("components/ui/Modal.tsx", "utf8");
 describe("Modal layout", () => {
   it("sizes itself to the visual viewport, which is what the keyboard shrinks", () => {
     expect(source).toContain("visualViewport");
+    // Height alone is not enough: iOS scrolls the layout viewport under the
+    // keyboard, so the dialog must follow offsetTop or its header is clipped.
+    expect(source).toContain("vv.offsetTop");
     // Both events matter: resize fires when the keyboard opens, scroll when
     // iOS shifts the visual viewport within the layout viewport.
     expect(source).toContain('addEventListener("resize"');
@@ -35,7 +38,7 @@ describe("Modal layout", () => {
   it("falls back to CSS when the browser has no visualViewport", () => {
     // Older browsers and SSR must still get a usable dialog rather than a
     // zero-height one.
-    expect(source).toContain("visualHeight === null ? undefined");
+    expect(source).toContain("visual === null ? undefined");
     expect(source).toMatch(/typeof window === "undefined" \? null : window\.visualViewport/);
   });
 
@@ -51,5 +54,24 @@ describe("Modal layout", () => {
   it("keeps the header and footer outside the scrolling area", () => {
     expect(source).toMatch(/border-b border-line-soft shrink-0/);
     expect(source).toMatch(/\{footer && <div className="[^"]*shrink-0/);
+  });
+});
+
+/**
+ * Same convention, different file: the pet mutators. The page closes the
+ * dialog before the write resolves, so a refused write has no route to the
+ * user except the mutator's own catch. Without it the pet silently never
+ * appeared — the exact "not working" a phone user reported.
+ */
+describe("pet mutators report failure", () => {
+  const provider = readFileSync("hooks/useFeederData.tsx", "utf8");
+
+  it.each(["createPet", "updatePet", "deletePet"])("%s catches and toasts", (name) => {
+    const start = provider.indexOf(`const ${name} = useCallback`);
+    expect(start).toBeGreaterThan(-1);
+    const body = provider.slice(start, provider.indexOf("}, [services, toast]);", start));
+    expect(body).toContain("try {");
+    expect(body).toContain("catch (e)");
+    expect(body).toMatch(/tone: "critical"/);
   });
 });

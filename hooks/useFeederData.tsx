@@ -399,22 +399,38 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
     if (pf) void dispense(pf.pet, pf.portionG);
   }, [pendingFeed, dispense]);
 
+  // The page closes the dialog before these resolve, so a refused write has
+  // no other way to reach the user: without the catch, a rules denial or a
+  // dropped connection meant the pet silently never appeared. Same shape as
+  // dispense, which always had it.
   const createPet = useCallback(async (vals: NewPet) => {
-    const p = await services.pets.create(vals);
-    setPets((prev) => [...prev, p]);
-    toast({ title: "Pet added", message: `${p.name} is enrolled and ready to be recognised.` });
+    try {
+      const p = await services.pets.create(vals);
+      setPets((prev) => [...prev, p]);
+      toast({ title: "Pet added", message: `${p.name} is enrolled and ready to be recognised.` });
+    } catch (e) {
+      toast({ tone: "critical", title: "Pet not added", message: errorMessage(e, "The pet could not be saved.") });
+    }
   }, [services, toast]);
 
   const updatePet = useCallback(async (id: string, vals: Partial<Pet>) => {
-    const p = await services.pets.update(id, vals);
-    setPets((prev) => prev.map((x) => (x.id === id ? p : x)));
-    toast({ title: "Profile saved", message: `${p.name}'s portion is now ${p.portionG} g.` });
+    try {
+      const p = await services.pets.update(id, vals);
+      setPets((prev) => prev.map((x) => (x.id === id ? p : x)));
+      toast({ title: "Profile saved", message: `${p.name}'s portion is now ${p.portionG} g.` });
+    } catch (e) {
+      toast({ tone: "critical", title: "Profile not saved", message: errorMessage(e, "The changes could not be saved.") });
+    }
   }, [services, toast]);
 
   const deletePet = useCallback(async (id: string) => {
-    await services.pets.remove(id);
-    setPets((prev) => prev.filter((x) => x.id !== id));
-    toast({ tone: "warning", title: "Profile deleted", message: "The pet was removed from the feeder." });
+    try {
+      await services.pets.remove(id);
+      setPets((prev) => prev.filter((x) => x.id !== id));
+      toast({ tone: "warning", title: "Profile deleted", message: "The pet was removed from the feeder." });
+    } catch (e) {
+      toast({ tone: "critical", title: "Profile not deleted", message: errorMessage(e, "The pet could not be removed.") });
+    }
   }, [services, toast]);
 
   const toggleSchedule = useCallback(async (s: Schedule) => {
