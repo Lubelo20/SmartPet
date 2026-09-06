@@ -35,6 +35,9 @@ const eslintConfig = [
       "ml/**",
       // Trained model artefacts served statically.
       "public/models/**",
+      // The Expo app: its own project, its own lint config, React Native
+      // globals the Next rules do not know about.
+      "mobile/**",
     ],
   },
 ];

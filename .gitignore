@@ -29,3 +29,8 @@ next-env.d.ts
 
 # Claude Code worktrees and scratch
 .claude/
+
+# Expo (mobile/)
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/

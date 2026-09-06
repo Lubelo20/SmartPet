@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Smart Pet Feeder",
+    "slug": "smart-pet-feeder",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "smartpetfeeder",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f172a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lubelo.smartpetfeeder",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Point the camera at your pet so the feeder can identify it before dispensing food.",
+        "NSMicrophoneUsageDescription": "Not used. Required only because the camera API requests both."
+      }
+    },
+    "android": {
+      "package": "com.lubelo.smartpetfeeder",
+      "adaptiveIcon": {
+        "backgroundColor": "#0f172a",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": ["android.permission.CAMERA"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-splash-screen"],
+    "extra": {
+      "appUrl": "https://smart-pet-tawny.vercel.app"
+    }
+  }
+}
