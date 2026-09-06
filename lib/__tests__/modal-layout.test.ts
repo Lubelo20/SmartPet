@@ -51,6 +51,20 @@ describe("Modal layout", () => {
     expect(source).toMatch(/\{children && <div className="[^"]*overflow-y-auto[^"]*min-h-0[^"]*flex-1/);
   });
 
+  it("does not re-run its focus effect when the caller re-renders", () => {
+    // Callers pass an inline arrow for onClose, so it is a new function on
+    // every render of the page — and the page re-renders about twice a second
+    // because the simulator ticks. If the focus effect depended on onClose it
+    // would tear down and set up continuously, and BOTH halves move focus:
+    // cleanup restores it to the trigger, setup sends it to the first field.
+    // On a phone that dismissed the keyboard the instant it opened.
+    expect(source).not.toContain("}, [open, onClose]);");
+    expect(source).toContain("onCloseRef");
+    // Escape must still close: the handler reads the latest callback from the
+    // ref rather than closing over a stale one.
+    expect(source).toContain("onCloseRef.current()");
+  });
+
   it("keeps the header and footer outside the scrolling area", () => {
     expect(source).toMatch(/border-b border-line-soft shrink-0/);
     expect(source).toMatch(/\{footer && <div className="[^"]*shrink-0/);

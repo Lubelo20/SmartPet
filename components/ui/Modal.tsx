@@ -36,6 +36,20 @@ export function Modal({ open, title, description, onClose, children, footer, wid
    */
   // offsetTop as well as height: iOS scrolls the layout viewport under the
   // keyboard, and a dialog fixed at top:0 would have its header scrolled off.
+  /**
+   * onClose is read through a ref so the focus effect below can depend on
+   * `open` alone. Callers pass an inline arrow — `onClose={() => setX(null)}`
+   * — which is a new function on every render of the page, and the page
+   * re-renders about twice a second because the simulator ticks. Listing
+   * onClose as a dependency therefore tore the effect down and set it up
+   * again continuously, and both halves move focus: the cleanup restores it
+   * to the trigger, the setup sends it to the first field. On a phone that
+   * dismissed the keyboard the instant it opened, so the form could not be
+   * typed into at all.
+   */
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; });
+
   const [visual, setVisual] = useState<{ height: number; top: number } | null>(null);
   useEffect(() => {
     if (!open) return;
@@ -67,7 +81,7 @@ export function Modal({ open, title, description, onClose, children, footer, wid
     (focusables()[0] ?? panel)?.focus();
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { onClose(); return; }
+      if (e.key === "Escape") { onCloseRef.current(); return; }
       if (e.key !== "Tab") return;
 
       // Trap: without this, Tab walks out of the dialog and onto the page
@@ -92,7 +106,7 @@ export function Modal({ open, title, description, onClose, children, footer, wid
       window.removeEventListener("keydown", onKey);
       restoreTo.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
