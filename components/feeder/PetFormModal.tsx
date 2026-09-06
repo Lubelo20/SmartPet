@@ -60,6 +60,12 @@ export function PetFormModal({ open, pet, onClose, onSubmit }: PetFormModalProps
       description="Portion size drives the target weight the load cell checks against."
       onClose={onClose}
       footer={<>
+        {/* First in source: flex-col-reverse puts it beneath the buttons on a
+            phone, and mr-auto floats it left of them in the desktop row. A
+            dead button with no reason reads as broken — the recording proved it. */}
+        {!valid && (
+          <p className="text-sm text-muted self-center sm:mr-auto">Enter a name and breed to add the pet.</p>
+        )}
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
         <Button disabled={!valid || photoBusy} onClick={() => onSubmit({
           ...form, weightKg: Number(form.weightKg), portionG: Number(form.portionG), mealsPerDay: Number(form.mealsPerDay),
@@ -69,11 +75,11 @@ export function PetFormModal({ open, pet, onClose, onSubmit }: PetFormModalProps
         })}>{pet && pet.id ? "Save changes" : "Add pet"}</Button>
       </>}>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Name"><Input value={form.name || ""} onChange={set("name")} placeholder="Max" /></Field>
+        <Field label="Name" hint="Required"><Input value={form.name || ""} onChange={set("name")} placeholder="Max" /></Field>
         <Field label="Species">
           <Select value={form.species} onChange={set("species")}><option>Dog</option><option>Cat</option></Select>
         </Field>
-        <Field label="Breed"><Input value={form.breed || ""} onChange={set("breed")} placeholder="Labrador Retriever" /></Field>
+        <Field label="Breed" hint="Required"><Input value={form.breed || ""} onChange={set("breed")} placeholder="Labrador Retriever" /></Field>
         <Field label="Body weight (kg)"><Input type="number" value={form.weightKg} onChange={set("weightKg")} /></Field>
         <Field label="Portion (g)" hint="Target weight per meal"><Input type="number" value={form.portionG} onChange={set("portionG")} /></Field>
         <Field label="Meals per day"><Input type="number" value={form.mealsPerDay} onChange={set("mealsPerDay")} /></Field>
