@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { initializeTestEnvironment, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
 import { doc, setDoc, type Firestore } from "firebase/firestore";
 import { createFirebaseAdapter } from "@/services/adapters/firebase";
@@ -9,7 +9,7 @@ import {
   alertToDoc, feedingToDoc, petToDoc, scheduleToDoc,
 } from "@/lib/firebase/mapping";
 import type { FeederServices } from "@/services/contract";
-import type { NewPet } from "@/lib/types";
+import type { Alert, FeedingRecord, NewPet, Pet } from "@/lib/types";
 
 const HID = "contract-house";
 const UID = "contract-user";
@@ -196,6 +196,59 @@ describe.each(cases)("$name adapter satisfies the contract", ({ make }) => {
     const [sample] = await svc.alerts.list();
     await svc.alerts.append({ ...sample, id: "AL_contract", timestamp: sample.timestamp + 1 });
     expect((await svc.alerts.list()).length).toBe(before + 1);
+  });
+
+  it("pushes live pet changes to a subscriber and stops on unsubscribe", async () => {
+    const seen: Pet[][] = [];
+    const stop = svc.live.pets((rows) => seen.push(rows));
+
+    // The first callback is the current state, so a subscriber never has to
+    // also call list() and reconcile two sources.
+    await vi.waitFor(() => expect(seen.length).toBeGreaterThan(0));
+    expect(seen[0].some((p) => p.id === "PET001")).toBe(true);
+
+    await svc.pets.create({ ...newPet, name: "Live" });
+    await vi.waitFor(() => {
+      expect(seen[seen.length - 1].some((p) => p.name === "Live")).toBe(true);
+    });
+
+    const countAtStop = seen.length;
+    stop();
+    await svc.pets.create({ ...newPet, name: "After" });
+    // A late snapshot would be a leak: the component that subscribed is gone.
+    await new Promise((r) => setTimeout(r, 300));
+    expect(seen.length).toBe(countAtStop);
+  });
+
+  it("pushes live feedings newest-first", async () => {
+    const seen: FeedingRecord[][] = [];
+    const stop = svc.live.feedings((rows) => seen.push(rows));
+    await vi.waitFor(() => expect(seen.length).toBeGreaterThan(0));
+
+    await svc.feedings.append({
+      id: "FD-LIVE", timestamp: Date.now() + 60_000, petId: "PET001",
+      targetG: 100, actualG: 99, status: "Completed", confidence: 95,
+      trigger: "Manual", durationS: 4, simulated: true,
+    });
+    await vi.waitFor(() => {
+      expect(seen[seen.length - 1][0]?.id).toBe("FD-LIVE");
+    });
+    stop();
+  });
+
+  it("pushes live alerts", async () => {
+    const seen: Alert[][] = [];
+    const stop = svc.live.alerts((rows) => seen.push(rows));
+    await vi.waitFor(() => expect(seen.length).toBeGreaterThan(0));
+
+    await svc.alerts.append({
+      id: "AL-LIVE", severity: "warning", type: "test", title: "Live alert",
+      message: "m", source: "s", timestamp: Date.now() + 60_000, read: false,
+    });
+    await vi.waitFor(() => {
+      expect(seen[seen.length - 1].some((a) => a.id === "AL-LIVE")).toBe(true);
+    });
+    stop();
   });
 
   it("appends and lists detections, newest first", async () => {

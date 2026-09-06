@@ -1,5 +1,5 @@
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query,
+  addDoc, collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query,
   setDoc, updateDoc, where, writeBatch, type Firestore,
 } from "firebase/firestore";
 import { toFeederError } from "@/lib/errors";
@@ -64,7 +64,11 @@ export function createFirebaseAdapter(db: Firestore, hid: string, uid: string): 
         return snap.docs.map((d) => feedingFromDoc(d.id, d.data()));
       }),
       append: (row: FeedingRecord) => guard("Could not record the feeding.", async () => {
-        await addDoc(col("feedingHistory"), feedingToDoc(row));
+        // setDoc at the row's own id, not addDoc: append returns this row to
+        // the caller, which puts it in local state and may later address it by
+        // id. addDoc would store it under a different, server-generated id, so
+        // the id the app holds would name no document at all.
+        await setDoc(ref("feedingHistory", row.id), feedingToDoc(row));
         return row;
       }),
     },
@@ -204,13 +208,44 @@ export function createFirebaseAdapter(db: Firestore, hid: string, uid: string): 
         return next;
       }),
     },
+    live: {
+      /**
+       * onSnapshot, not polling: Firestore pushes, and it fires immediately
+       * with the current rows plus every local write (latency compensation),
+       * so a subscriber sees its own change before the server confirms it.
+       *
+       * A snapshot error is swallowed deliberately. These feed a background
+       * refresh of data the pages already loaded once; turning a transient
+       * listener drop into an error state would replace working content with
+       * a failure screen. The one-shot list() paths still surface errors.
+       */
+      pets(onChange) {
+        return onSnapshot(query(col("pets"), orderBy("name")),
+          (snap) => onChange(snap.docs.map((d) => petFromDoc(d.id, d.data()))),
+          () => { /* see above */ });
+      },
+      feedings(onChange) {
+        return onSnapshot(query(col("feedingHistory"), orderBy("timestamp", "desc")),
+          (snap) => onChange(snap.docs.map((d) => feedingFromDoc(d.id, d.data()))),
+          () => { /* see above */ });
+      },
+      alerts(onChange) {
+        return onSnapshot(query(col("alerts"), orderBy("timestamp", "desc")),
+          (snap) => onChange(snap.docs.map((d) => alertFromDoc(d.id, d.data()))),
+          () => { /* see above */ });
+      },
+    },
     alerts: {
       list: () => guard("Could not load alerts.", async () => {
         const snap = await getDocs(query(col("alerts"), orderBy("timestamp", "desc")));
         return snap.docs.map((d) => alertFromDoc(d.id, d.data()));
       }),
       append: (row: Alert) => guard("Could not record the alert.", async () => {
-        await addDoc(col("alerts"), alertToDoc(row));
+        // Same reason as feedings, but here it was a live defect: markRead
+        // updates alerts/{id} with the id this row carries, and addDoc stored
+        // it under a different one — so marking an alert read wrote to a
+        // document that did not exist.
+        await setDoc(ref("alerts", row.id), alertToDoc(row));
         return row;
       }),
       markRead: (id) => guard("Could not update the alert.", async () => {

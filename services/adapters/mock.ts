@@ -65,6 +65,19 @@ export function createMockAdapter(): FeederServices {
   };
   const latency = (): Promise<void> => delay(120 + Math.random() * 180);
 
+  /**
+   * Live subscriptions for the mock adapter. Firestore pushes because another
+   * device wrote; here the only writer is this tab, so the emitter fires after
+   * each local mutation. That keeps the two adapters indistinguishable to the
+   * contract suite, which is the property that lets the app run with no
+   * backend at all.
+   */
+  type Sink = { pets: Set<(r: Pet[]) => void>; feedings: Set<(r: FeedingRecord[]) => void>; alerts: Set<(r: Alert[]) => void> };
+  const sinks: Sink = { pets: new Set(), feedings: new Set(), alerts: new Set() };
+  const emitPets = () => sinks.pets.forEach((fn) => fn([...store.pets]));
+  const emitFeedings = () => sinks.feedings.forEach((fn) => fn([...store.feedings].sort((a, b) => b.timestamp - a.timestamp)));
+  const emitAlerts = () => sinks.alerts.forEach((fn) => fn([...store.alerts].sort((a, b) => b.timestamp - a.timestamp)));
+
   return {
     pets: {
       async list() {
@@ -83,6 +96,7 @@ export function createMockAdapter(): FeederServices {
           enrolledAt: dayKey(Date.now()),
         };
         store.pets = [...store.pets, next];
+        emitPets();
         return next;
       },
       async update(id: string, patch: Partial<Pet>) {
@@ -97,6 +111,7 @@ export function createMockAdapter(): FeederServices {
           if (next.photoData === "") delete next.photoData;
           return next;
         });
+        emitPets();
         const next = store.pets.find((p) => p.id === id);
         if (!next) throw new FeederError("not-found", "That pet no longer exists.");
         return next;
@@ -104,6 +119,7 @@ export function createMockAdapter(): FeederServices {
       async remove(id: string) {
         await latency();
         store.pets = store.pets.filter((p) => p.id !== id);
+        emitPets();
         return true;
       },
     },
@@ -114,6 +130,7 @@ export function createMockAdapter(): FeederServices {
       },
       async append(row: FeedingRecord) {
         store.feedings = [row, ...store.feedings];
+        emitFeedings();
         return row;
       },
     },
@@ -192,6 +209,23 @@ export function createMockAdapter(): FeederServices {
         return { ...store.settings, notifications: { ...store.settings.notifications } };
       },
     },
+    live: {
+      pets(onChange) {
+        sinks.pets.add(onChange);
+        onChange([...store.pets]);
+        return () => { sinks.pets.delete(onChange); };
+      },
+      feedings(onChange) {
+        sinks.feedings.add(onChange);
+        onChange([...store.feedings].sort((a, b) => b.timestamp - a.timestamp));
+        return () => { sinks.feedings.delete(onChange); };
+      },
+      alerts(onChange) {
+        sinks.alerts.add(onChange);
+        onChange([...store.alerts].sort((a, b) => b.timestamp - a.timestamp));
+        return () => { sinks.alerts.delete(onChange); };
+      },
+    },
     alerts: {
       async list() {
         await latency();
@@ -199,14 +233,17 @@ export function createMockAdapter(): FeederServices {
       },
       async append(row: Alert) {
         store.alerts = [row, ...store.alerts];
+        emitAlerts();
         return row;
       },
       async markRead(id: string) {
         store.alerts = store.alerts.map((a) => (a.id === id ? { ...a, read: true } : a));
+        emitAlerts();
         return true;
       },
       async markAllRead() {
         store.alerts = store.alerts.map((a) => ({ ...a, read: true }));
+        emitAlerts();
         return true;
       },
     },

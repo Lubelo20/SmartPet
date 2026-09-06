@@ -3,6 +3,9 @@ import type {
   Settings,
 } from "@/lib/types";
 
+/** Stops a live subscription. Calling it twice is safe. */
+export type Unsubscribe = () => void;
+
 export interface FeederServices {
   pets: {
     list(): Promise<Pet[]>;
@@ -46,6 +49,16 @@ export interface FeederServices {
   settings: {
     get(): Promise<Settings>;
     save(next: Settings): Promise<Settings>;
+  };
+  /**
+   * Push updates for the collections a second device can change underneath
+   * you. Each subscriber is called immediately with the current rows, so a
+   * caller never has to also list() and reconcile two sources of truth.
+   */
+  live: {
+    pets(onChange: (rows: Pet[]) => void): Unsubscribe;
+    feedings(onChange: (rows: FeedingRecord[]) => void): Unsubscribe;
+    alerts(onChange: (rows: Alert[]) => void): Unsubscribe;
   };
   alerts: {
     list(): Promise<Alert[]>;

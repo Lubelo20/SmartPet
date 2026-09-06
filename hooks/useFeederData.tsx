@@ -113,6 +113,25 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { void load(); engine.start(); return () => engine.stop(); }, [load, engine]);
 
+  /**
+   * Live subscriptions, so a second device — the phone, another household
+   * member's laptop — is reflected here without a refresh. `load()` above
+   * still runs: it is what surfaces a read failure, and it fetches the
+   * collections that have no listener (settings, household, invites).
+   *
+   * Each subscription replaces its slice wholesale, so an optimistic local
+   * write is reconciled by the snapshot that follows rather than duplicated.
+   * Firestore fires local writes immediately, so nothing flickers.
+   */
+  useEffect(() => {
+    const stops = [
+      services.live.pets(setPets),
+      services.live.feedings(setFeedings),
+      services.live.alerts(setAlerts),
+    ];
+    return () => stops.forEach((stop) => stop());
+  }, [services]);
+
   // The engine takes its pet-name lookup by injection, so it has to be told
   // whenever the loaded pets change — before demo autoplay can start a cycle.
   useEffect(() => { engine.setPets(pets); }, [engine, pets]);
