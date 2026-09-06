@@ -13,8 +13,22 @@ import { buildInsightsPrompt, sanitiseInsightsInput } from "@/lib/insights";
  * all, exactly as it does for Firebase and Telegram.
  */
 
-const GEMINI_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+/**
+ * Model names get retired: gemini-2.5-flash returned 404 "no longer available
+ * to new users" the first time a real key was pointed at it. GEMINI_MODEL
+ * overrides this without a code change when that happens again.
+ */
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+
+/**
+ * Vercel's default function ceiling is 10s, and a measured summary takes ~20s
+ * because the model thinks before it writes. Without this the platform kills
+ * the request before Gemini answers, and the card reports a failure that never
+ * happened.
+ */
+export const maxDuration = 60;
+const geminiUrl = (model: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
 export async function POST(request: Request) {
   const key = process.env.GEMINI_API_KEY;
@@ -37,14 +51,22 @@ export async function POST(request: Request) {
   }
 
   try {
-    const res = await fetch(GEMINI_URL, {
+    const res = await fetch(geminiUrl(MODEL), {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify({
         contents: [{ parts: [{ text: buildInsightsPrompt(input) }] }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 512 },
+        // Generous on purpose: Gemini 3.x spends "thinking" tokens from this
+        // same budget — measured at ~500 for a four-sentence summary — so 512
+        // truncated the answer mid-word. Deliberately not using thinkingConfig
+        // to trim that: the field is model-specific and GEMINI_MODEL is
+        // overridable, so a narrower budget is the portable fix.
+        generationConfig: { temperature: 0.4, maxOutputTokens: 2048 },
       }),
-      signal: AbortSignal.timeout(20_000),
+      // Measured at 19.4s for a four-sentence summary; 20s cut it off at the
+      // wire. Generous enough to be the model's answer, short enough that a
+      // hung request still fails inside the platform's own ceiling.
+      signal: AbortSignal.timeout(45_000),
     });
 
     if (!res.ok) {
