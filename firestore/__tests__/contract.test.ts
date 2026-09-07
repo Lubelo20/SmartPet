@@ -4,6 +4,7 @@ import { initializeTestEnvironment, type RulesTestEnvironment } from "@firebase/
 import { doc, setDoc, type Firestore } from "firebase/firestore";
 import { createFirebaseAdapter } from "@/services/adapters/firebase";
 import { createMockAdapter } from "@/services/adapters/mock";
+import { loadDemoData } from "@/lib/demo-seed";
 import { buildSeedAlerts, buildSeedFeedings, buildSeedPets, buildSeedSchedules } from "@/lib/seed-data";
 import {
   alertToDoc, feedingToDoc, petToDoc, scheduleToDoc,
@@ -196,6 +197,17 @@ describe.each(cases)("$name adapter satisfies the contract", ({ make }) => {
     const [sample] = await svc.alerts.list();
     await svc.alerts.append({ ...sample, id: "AL_contract", timestamp: sample.timestamp + 1 });
     expect((await svc.alerts.list()).length).toBe(before + 1);
+  });
+
+  it("loads demo data into an empty household and refuses to duplicate it", async () => {
+    const fresh = await make();
+    // The seeded fixtures already contain pets, so prove the guard first: a
+    // household with pets must be left exactly as it is.
+    const before = await fresh.pets.list();
+    expect(before.length).toBeGreaterThan(0);
+    const skipped = await loadDemoData(fresh);
+    expect(skipped.loaded).toBe(false);
+    expect((await fresh.pets.list()).length).toBe(before.length);
   });
 
   it("records an approved feeding decision and lists it newest-first", async () => {

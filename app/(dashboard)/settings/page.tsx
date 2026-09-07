@@ -8,6 +8,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
 import { SectionHead } from "@/components/ui/SectionHead";
+import { DemoDataCard } from "@/components/feeder/DemoDataCard";
 import { Select } from "@/components/ui/Select";
 import { useFeederData } from "@/hooks/useFeederData";
 import { CONFIG } from "@/lib/config";
@@ -107,6 +108,8 @@ export default function SettingsPage() {
           ))}
         </div>
       </Card>
+
+      <div className="lg:col-span-2"><DemoDataCard /></div>
 
       <div className="lg:col-span-2 flex justify-end">
         <Button icon={Check} onClick={() => saveSettings(form)}>Save settings</Button>
