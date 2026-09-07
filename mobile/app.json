@@ -7,6 +7,10 @@
     "icon": "./assets/icon.png",
     "scheme": "smartpetfeeder",
     "userInterfaceStyle": "automatic",
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -30,14 +34,24 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": ["android.permission.CAMERA"]
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.CAMERA"
+      ]
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "plugins": ["expo-splash-screen"],
+    "plugins": [
+      "expo-splash-screen"
+    ],
     "extra": {
-      "appUrl": "https://smart-pet-tawny.vercel.app"
+      "appUrl": "https://smart-pet-tawny.vercel.app",
+      "eas": {
+        "projectId": "e7141b3d-22c5-4c01-8b9c-17b5c3bfe8c8"
+      }
+    },
+    "owner": "lubelo",
+    "runtimeVersion": "exposdk:57.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/e7141b3d-22c5-4c01-8b9c-17b5c3bfe8c8"
     }
   }
 }

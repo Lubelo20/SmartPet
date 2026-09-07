@@ -3,14 +3,41 @@
 An Expo app that runs the dashboard on iOS and Android. Open it with **Expo
 Go** — no build, no store account, no native toolchain.
 
+### Published — no dev server needed
+
+The app is published to Expo's servers, so Expo Go can open it from anywhere
+with nothing running on a laptop:
+
+```
+exp://u.expo.dev/e7141b3d-22c5-4c01-8b9c-17b5c3bfe8c8?channel-name=main&runtime-version=exposdk:57.0.0
+```
+
+Publish a new version after changing anything in `mobile/`:
+
+```bash
+cd mobile
+npx eas-cli@latest update --branch main --message "what changed" --environment production
+```
+
+Note that changes to the *dashboard* need no publish at all — the shell loads
+the deployed website, so a Vercel deploy reaches the phone immediately. Only
+changes to `App.tsx`, `app.json` or the native config need this.
+
+`runtimeVersion` is pinned to `exposdk:57.0.0` rather than EAS's default
+appVersion policy: Expo Go only loads an update whose runtime names its own
+SDK. A standalone build would want the appVersion policy back.
+
+### Local development
+
 ```bash
 cd mobile
 npm install
 npx expo start        # scan the QR with Expo Go (Android) or Camera (iOS)
 ```
 
-Both devices must be on the same Wi-Fi. If your network blocks device-to-device
-traffic (common on campus and guest Wi-Fi), use `npx expo start --tunnel`.
+Both devices must be on the same Wi-Fi, and the URL changes with the network.
+If your network blocks device-to-device traffic (common on campus and guest
+Wi-Fi), use `npx expo start --tunnel`.
 
 ## Why a WebView and not native screens
 
