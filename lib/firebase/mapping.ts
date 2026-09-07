@@ -1,5 +1,7 @@
 import { Timestamp } from "firebase/firestore";
-import type { Alert, AlertSeverity, Detection, FeedingRecord, Pet, PetColour, Schedule } from "@/lib/types";
+import type {
+  Alert, AlertSeverity, Detection, FeedingEvent, FeedingRecord, Pet, PetColour, Schedule,
+} from "@/lib/types";
 
 /**
  * The only module in the app where `Timestamp` exists. Everything above this
@@ -40,6 +42,37 @@ export function petFromDoc(id: string, data: Record<string, unknown>): Pet {
     // component ever has to distinguish an empty photo from a missing one.
     ...(data.photoData ? { photoData: String(data.photoData) } : {}),
     enrolledAt: String(data.enrolledAt),
+  };
+}
+
+/* ---------------- Feeding events ---------------- */
+
+export function feedingEventToDoc(row: FeedingEvent): Record<string, unknown> {
+  const { id: _id, timestamp, ...rest } = row;
+  // Nulls are written explicitly, not omitted: a refusal must read back as a
+  // feed that never happened, not as one with unknown amounts.
+  return { ...rest, timestamp: Timestamp.fromMillis(timestamp) };
+}
+
+export function feedingEventFromDoc(id: string, data: Record<string, unknown>): FeedingEvent {
+  const orNull = (v: unknown): number | null =>
+    v === null || v === undefined ? null : Number(v);
+  return {
+    id,
+    requestId: String(data.requestId),
+    deviceId: String(data.deviceId),
+    timestamp: toMillis(data.timestamp),
+    petId: data.petId === null || data.petId === undefined ? null : String(data.petId),
+    petName: String(data.petName),
+    requestedG: Number(data.requestedG),
+    actualG: orNull(data.actualG),
+    aiConfidence: orNull(data.aiConfidence),
+    modelVersion: data.modelVersion === null || data.modelVersion === undefined
+      ? null : String(data.modelVersion),
+    decision: data.decision as FeedingEvent["decision"],
+    reason: (data.reason ?? null) as FeedingEvent["reason"],
+    result: data.result as FeedingEvent["result"],
+    trigger: data.trigger as FeedingEvent["trigger"],
   };
 }
 

@@ -4,14 +4,15 @@ import {
 } from "firebase/firestore";
 import { toFeederError } from "@/lib/errors";
 import {
-  alertFromDoc, alertToDoc, detectionFromDoc, detectionToDoc, feedingFromDoc,
-  feedingToDoc, petFromDoc, petToDoc, scheduleFromDoc, scheduleToDoc,
+  alertFromDoc, alertToDoc, detectionFromDoc, detectionToDoc, feedingEventFromDoc,
+  feedingEventToDoc, feedingFromDoc, feedingToDoc, petFromDoc, petToDoc,
+  scheduleFromDoc, scheduleToDoc,
 } from "@/lib/firebase/mapping";
 import { buildSeedSettings } from "@/lib/seed-data";
 import { DEFAULT_NOTIFICATIONS } from "@/lib/notifications";
 import type {
-  Alert, Detection, DeviceSettings, FeedingRecord, Invite, NewPet, NewSchedule,
-  NotificationSettings, Pet, Settings,
+  Alert, Detection, DeviceSettings, FeedingEvent, FeedingRecord, Invite, NewPet,
+  NewSchedule, NotificationSettings, Pet, Settings,
 } from "@/lib/types";
 import type { FeederServices } from "@/services/contract";
 
@@ -69,6 +70,16 @@ export function createFirebaseAdapter(db: Firestore, hid: string, uid: string): 
         // id. addDoc would store it under a different, server-generated id, so
         // the id the app holds would name no document at all.
         await setDoc(ref("feedingHistory", row.id), feedingToDoc(row));
+        return row;
+      }),
+    },
+    feedingEvents: {
+      list: () => guard("Could not load the feeding decisions.", async () => {
+        const snap = await getDocs(query(col("feedingEvents"), orderBy("timestamp", "desc")));
+        return snap.docs.map((d) => feedingEventFromDoc(d.id, d.data()));
+      }),
+      append: (row: FeedingEvent) => guard("Could not record the feeding decision.", async () => {
+        await setDoc(ref("feedingEvents", row.id), feedingEventToDoc(row));
         return row;
       }),
     },

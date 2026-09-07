@@ -198,6 +198,48 @@ describe.each(cases)("$name adapter satisfies the contract", ({ make }) => {
     expect((await svc.alerts.list()).length).toBe(before + 1);
   });
 
+  it("records an approved feeding decision and lists it newest-first", async () => {
+    await svc.feedingEvents.append({
+      id: "FE001", requestId: "FEED-1", deviceId: "ESP32-PETFEEDER-001",
+      timestamp: 1_000, petId: "PET001", petName: "Max", requestedG: 150,
+      actualG: 148, aiConfidence: null, modelVersion: null,
+      decision: "APPROVED", reason: null, result: "SUCCESS", trigger: "Manual",
+    });
+    await svc.feedingEvents.append({
+      id: "FE002", requestId: "FEED-2", deviceId: "ESP32-PETFEEDER-001",
+      timestamp: 2_000, petId: "PET001", petName: "Max", requestedG: 150,
+      actualG: null, aiConfidence: null, modelVersion: null,
+      decision: "REJECTED", reason: "COOLDOWN_ACTIVE", result: "NOT_ATTEMPTED",
+      trigger: "Manual",
+    });
+
+    const rows = await svc.feedingEvents.list();
+    expect(rows.map((r) => r.id)).toEqual(["FE002", "FE001"]);
+    expect(rows[0].reason).toBe("COOLDOWN_ACTIVE");
+    expect(rows[0].actualG).toBeNull();
+    expect(rows[1].decision).toBe("APPROVED");
+    expect(rows[1].actualG).toBe(148);
+  });
+
+  it("keeps a rejected event's null fields null rather than dropping them", async () => {
+    // Firestore rejects undefined, so the mapping writes explicit nulls. If it
+    // omitted them instead, a refusal would read back as a feed with unknown
+    // amounts rather than one that never happened.
+    await svc.feedingEvents.append({
+      id: "FE003", requestId: "FEED-3", deviceId: "ESP32-PETFEEDER-001",
+      timestamp: 3_000, petId: null, petName: "Unknown", requestedG: 120,
+      actualG: null, aiConfidence: 0.42, modelVersion: "v1.0",
+      decision: "REJECTED", reason: "UNKNOWN_PET", result: "NOT_ATTEMPTED",
+      trigger: "AI",
+    });
+    const row = (await svc.feedingEvents.list()).find((r) => r.id === "FE003");
+    expect(row).toBeDefined();
+    expect(row!.petId).toBeNull();
+    expect(row!.actualG).toBeNull();
+    expect(row!.aiConfidence).toBeCloseTo(0.42);
+    expect(row!.trigger).toBe("AI");
+  });
+
   it("pushes live pet changes to a subscriber and stops on unsubscribe", async () => {
     const seen: Pet[][] = [];
     const stop = svc.live.pets((rows) => seen.push(rows));

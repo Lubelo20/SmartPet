@@ -1,6 +1,6 @@
 import type {
-  Alert, Detection, FeedingRecord, HouseholdMember, Invite, NewPet, NewSchedule, Pet, Schedule,
-  Settings,
+  Alert, Detection, FeedingEvent, FeedingRecord, HouseholdMember, Invite, NewPet, NewSchedule,
+  Pet, Schedule, Settings,
 } from "@/lib/types";
 
 /** Stops a live subscription. Calling it twice is safe. */
@@ -17,6 +17,13 @@ export interface FeederServices {
   feedings: {
     list(): Promise<FeedingRecord[]>;
     append(row: FeedingRecord): Promise<FeedingRecord>;
+  };
+  /**
+   * Every feeding decision and its outcome, refusals included. Newest first.
+   */
+  feedingEvents: {
+    list(): Promise<FeedingEvent[]>;
+    append(row: FeedingEvent): Promise<FeedingEvent>;
   };
   /** AI sightings from the camera loop. Newest first, like feedings. */
   detections: {

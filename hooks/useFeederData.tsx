@@ -6,10 +6,10 @@ import { useToast } from "@/hooks/useToast";
 import { CONFIG } from "@/lib/config";
 import { toFeederError } from "@/lib/errors";
 import type {
-  Alert, AlertSeverity, Detection, EngineEvent, FeedingRecord, HouseholdMember, Invite, NewPet,
-  Pet, Prediction, Schedule, Settings, Telemetry,
+  Alert, AlertSeverity, Detection, EngineEvent, FeedTrigger, FeedingEvent, FeedingRecord,
+  HouseholdMember, Invite, NewPet, Pet, Prediction, Schedule, Settings, Telemetry,
 } from "@/lib/types";
-import { decideFeeding } from "@/lib/decision";
+import { decideFeeding, type Decision } from "@/lib/decision";
 import { rejectionMessage } from "@/lib/decision-messages";
 import { dailyTotalFor } from "@/lib/limits";
 import { shouldToast } from "@/lib/notifications";
@@ -299,6 +299,40 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
     }
   }), [pets, toast, notify, raiseAlert, engine, services, telemetry, reportWriteFailure]);
 
+  /**
+   * Every decision, approved or refused, goes here. A FeedingRecord only
+   * exists when food actually moved, so without this a refusal left nothing
+   * behind but a toast — and "why did my pet not get fed?" had no answer.
+   *
+   * Fire-and-forget: the decision has already been acted on, and failing to
+   * write the audit row must not also block or undo the feed.
+   */
+  const recordDecision = useCallback((
+    verdict: Decision,
+    ctx: { trigger: FeedTrigger; requestedG: number; petName: string; prediction?: Prediction | null },
+  ) => {
+    const approved = verdict.decision === "APPROVED";
+    const row: FeedingEvent = {
+      id: uid("FE"),
+      requestId: uid("FEED"),
+      deviceId: t.device.id,
+      timestamp: Date.now(),
+      petId: verdict.petId,
+      petName: ctx.petName,
+      requestedG: ctx.requestedG,
+      // The cycle reports what actually landed; this row records the decision.
+      actualG: null,
+      aiConfidence: ctx.prediction?.confidence ?? null,
+      modelVersion: ctx.prediction?.modelVersion ?? null,
+      decision: approved ? "APPROVED" : "REJECTED",
+      reason: approved ? null : verdict.reason,
+      result: approved ? "SUCCESS" : "NOT_ATTEMPTED",
+      trigger: ctx.trigger,
+    };
+    void services.feedingEvents.append(row)
+      .catch(reportWriteFailure("Decision not recorded", "The feeding decision was not saved."));
+  }, [services, t.device.id, reportWriteFailure]);
+
   const recordDetection = useCallback((p: Prediction) => {
     const pet = p.petId ? pets.find((x) => x.id === p.petId) ?? null : null;
     const row: Detection = {
@@ -330,6 +364,9 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
       requestedG,
     });
 
+    const petName = pet?.name ?? "Unknown";
+    recordDecision(verdict, { trigger: "AI", requestedG, petName, prediction: p });
+
     if (verdict.decision === "REJECTED") {
       const { title, message } = rejectionMessage(verdict.reason, { petName: pet?.name ?? "This animal" });
       toast({ tone: "warning", title, message });
@@ -343,7 +380,7 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       toast({ tone: "critical", title: "Feeding failed", message: errorMessage(e, "The feeding command failed.") });
     }
-  }, [commandBus, toast, feedings, settings, schedules, t, pets]);
+  }, [commandBus, toast, feedings, settings, schedules, t, pets, recordDecision]);
 
   const dispense = useCallback(async (pet: Pet, portionG: number) => {
     if (!pet) return;
@@ -365,6 +402,8 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
       requestedG: portionG,
     });
 
+    recordDecision(verdict, { trigger: "Manual", requestedG: portionG, petName: pet.name });
+
     if (verdict.decision === "REJECTED") {
       const { title, message } = rejectionMessage(verdict.reason, { petName: pet.name });
       toast({ tone: "critical", title, message });
@@ -378,7 +417,7 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       toast({ tone: "critical", title: "Feeding failed", message: errorMessage(e, "The feeding command failed.") });
     }
-  }, [commandBus, toast, feedings, settings, schedules, t]);
+  }, [commandBus, toast, feedings, settings, schedules, t, recordDecision]);
 
   const stopCycle = useCallback(async () => {
     try { await commandBus.send("feeding.stop"); }

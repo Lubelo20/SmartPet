@@ -148,6 +148,33 @@ export type RejectionReason =
 /** What asked for this feed. AI checks apply only to "AI". */
 export type FeedTrigger = "Manual" | "Scheduled" | "AI";
 
+export type FeedingDecision = "APPROVED" | "REJECTED";
+
+/**
+ * One feeding DECISION and its outcome — including the refusals, which is the
+ * point. A feeding record only exists when food moved; without this, "why did
+ * my pet not get fed?" has no answer beyond a toast that has already gone.
+ *
+ * Separate from FeedingRecord on purpose: that is an observation of food
+ * moving, this is a decision and its consequence. Collapsing them would make
+ * "how often is a feed refused, and why?" unanswerable without filtering on
+ * a null.
+ */
+export type FeedingEvent = {
+  id: string; requestId: string; deviceId: string; timestamp: number;
+  petId: string | null; petName: string;
+  requestedG: number;
+  /** null when nothing was dispensed. */
+  actualG: number | null;
+  /** 0..1, and null for a feed no model was involved in. */
+  aiConfidence: number | null;
+  modelVersion: string | null;
+  decision: FeedingDecision;
+  reason: RejectionReason | null;
+  result: "SUCCESS" | "SHORT_POUR" | "FAILED" | "NOT_ATTEMPTED";
+  trigger: FeedTrigger;
+};
+
 /**
  * One AI sighting, recorded whenever the camera loop settles on an identity
  * (spec §5.2). `confidence` is 0..1 — the wire scale; it meets the stored
