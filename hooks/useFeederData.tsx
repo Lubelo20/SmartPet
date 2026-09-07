@@ -6,10 +6,11 @@ import { useToast } from "@/hooks/useToast";
 import { CONFIG } from "@/lib/config";
 import { toFeederError } from "@/lib/errors";
 import type {
-  Alert, AlertSeverity, Detection, EngineEvent, FeedTrigger, FeedingEvent, FeedingRecord,
-  HouseholdMember, Invite, NewPet, Pet, Prediction, Schedule, Settings, Telemetry,
+  Alert, AlertSeverity, Detection, EngineEvent, FeedTrigger, FeedingRecord, HouseholdMember,
+  Invite, NewPet, Pet, Prediction, RejectionReason, Schedule, Settings, Telemetry,
 } from "@/lib/types";
-import { decideFeeding, type Decision } from "@/lib/decision";
+import { decideFeeding } from "@/lib/decision";
+import { approvedEvent, refusedEvent } from "@/lib/feeding-events";
 import { rejectionMessage } from "@/lib/decision-messages";
 import { dailyTotalFor } from "@/lib/limits";
 import { shouldToast } from "@/lib/notifications";
@@ -236,6 +237,11 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
         lastFeedAtRef.current = { ...lastFeedAtRef.current, [evt.record.petId]: evt.record.timestamp };
         void services.feedings.append(evt.record)
           .catch(reportWriteFailure("Feeding not recorded", "The feeding record was not saved."));
+        // The approval's audit row, written now that the outcome is known.
+        void services.feedingEvents.append(approvedEvent({
+          record: evt.record, short: evt.short, deviceId: t.device.id,
+          petName: p ? p.name : "Unknown", id: uid("FE"), requestId: uid("FEED"),
+        })).catch(reportWriteFailure("Decision not recorded", "The feeding decision was not saved."));
         if (evt.short) {
           notify("cycle:short", { tone: "critical", title: "Cycle ended short", message: `Only ${evt.record.actualG} g of ${evt.record.targetG} g was dispensed.` });
           raiseAlert("critical", "Feeding error", "Target food weight was not reached",
@@ -249,9 +255,25 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
         }
         break;
       }
-      case "cycle:stopped":
+      case "cycle:stopped": {
         toast({ tone: "warning", title: "Cycle stopped", message: evt.reason });
+        // An approved feed that did not finish. Recorded as FAILED with
+        // whatever actually reached the bowl, so a stopped cycle is not
+        // silently absent from the audit trail.
+        if (evt.petId) {
+          const sp = pets.find((x) => x.id === evt.petId);
+          void services.feedingEvents.append(approvedEvent({
+            record: {
+              id: uid("FD"), timestamp: Date.now(), petId: evt.petId,
+              targetG: evt.targetG, actualG: evt.dispensedG, status: "Under-dispensed",
+              confidence: 0, trigger: "Manual", durationS: 0, simulated: true,
+            },
+            short: false, failed: true, deviceId: t.device.id,
+            petName: sp ? sp.name : "Unknown", id: uid("FE"), requestId: uid("FEED"),
+          })).catch(reportWriteFailure("Decision not recorded", "The feeding decision was not saved."));
+        }
         break;
+      }
       case "detection:unknown":
         notify("detection:unknown", { tone: "warning", title: "Unknown pet", message: "Confidence was below the threshold, so no food was dispensed." });
         raiseAlert("warning", "Unknown pet", "Pet detected but classification confidence is too low",
@@ -300,37 +322,26 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
   }), [pets, toast, notify, raiseAlert, engine, services, telemetry, reportWriteFailure]);
 
   /**
-   * Every decision, approved or refused, goes here. A FeedingRecord only
-   * exists when food actually moved, so without this a refusal left nothing
-   * behind but a toast — and "why did my pet not get fed?" had no answer.
+   * Refusals are recorded the moment they are decided: nothing further can
+   * happen to a feed that was declined.
+   *
+   * Approvals are NOT recorded here. An approved decision is not yet an
+   * outcome — the cycle can still be stopped, short-pour or fail — and a row
+   * claiming SUCCESS for food that never reached the bowl is worse than no
+   * row. Those are written from the cycle events below, where the result is
+   * known.
    *
    * Fire-and-forget: the decision has already been acted on, and failing to
-   * write the audit row must not also block or undo the feed.
+   * write the audit row must not block or undo it.
    */
-  const recordDecision = useCallback((
-    verdict: Decision,
-    ctx: { trigger: FeedTrigger; requestedG: number; petName: string; prediction?: Prediction | null },
+  const recordRefusal = useCallback((
+    reason: RejectionReason,
+    ctx: { trigger: FeedTrigger; requestedG: number; petId: string | null; petName: string; prediction?: Prediction | null },
   ) => {
-    const approved = verdict.decision === "APPROVED";
-    const row: FeedingEvent = {
-      id: uid("FE"),
-      requestId: uid("FEED"),
-      deviceId: t.device.id,
-      timestamp: Date.now(),
-      petId: verdict.petId,
-      petName: ctx.petName,
-      requestedG: ctx.requestedG,
-      // The cycle reports what actually landed; this row records the decision.
-      actualG: null,
-      aiConfidence: ctx.prediction?.confidence ?? null,
-      modelVersion: ctx.prediction?.modelVersion ?? null,
-      decision: approved ? "APPROVED" : "REJECTED",
-      reason: approved ? null : verdict.reason,
-      result: approved ? "SUCCESS" : "NOT_ATTEMPTED",
-      trigger: ctx.trigger,
-    };
-    void services.feedingEvents.append(row)
-      .catch(reportWriteFailure("Decision not recorded", "The feeding decision was not saved."));
+    void services.feedingEvents.append(refusedEvent({
+      reason, ...ctx, deviceId: t.device.id, now: Date.now(),
+      id: uid("FE"), requestId: uid("FEED"),
+    })).catch(reportWriteFailure("Decision not recorded", "The feeding decision was not saved."));
   }, [services, t.device.id, reportWriteFailure]);
 
   const recordDetection = useCallback((p: Prediction) => {
@@ -364,10 +375,11 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
       requestedG,
     });
 
-    const petName = pet?.name ?? "Unknown";
-    recordDecision(verdict, { trigger: "AI", requestedG, petName, prediction: p });
-
     if (verdict.decision === "REJECTED") {
+      recordRefusal(verdict.reason, {
+        trigger: "AI", requestedG, petId: verdict.petId,
+        petName: pet?.name ?? "Unknown", prediction: p,
+      });
       const { title, message } = rejectionMessage(verdict.reason, { petName: pet?.name ?? "This animal" });
       toast({ tone: "warning", title, message });
       return;
@@ -380,7 +392,7 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       toast({ tone: "critical", title: "Feeding failed", message: errorMessage(e, "The feeding command failed.") });
     }
-  }, [commandBus, toast, feedings, settings, schedules, t, pets, recordDecision]);
+  }, [commandBus, toast, feedings, settings, schedules, t, pets, recordRefusal]);
 
   const dispense = useCallback(async (pet: Pet, portionG: number) => {
     if (!pet) return;
@@ -402,9 +414,10 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
       requestedG: portionG,
     });
 
-    recordDecision(verdict, { trigger: "Manual", requestedG: portionG, petName: pet.name });
-
     if (verdict.decision === "REJECTED") {
+      recordRefusal(verdict.reason, {
+        trigger: "Manual", requestedG: portionG, petId: pet.id, petName: pet.name,
+      });
       const { title, message } = rejectionMessage(verdict.reason, { petName: pet.name });
       toast({ tone: "critical", title, message });
       return;
@@ -417,7 +430,7 @@ export function FeederDataProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       toast({ tone: "critical", title: "Feeding failed", message: errorMessage(e, "The feeding command failed.") });
     }
-  }, [commandBus, toast, feedings, settings, schedules, t, recordDecision]);
+  }, [commandBus, toast, feedings, settings, schedules, t, recordRefusal]);
 
   const stopCycle = useCallback(async () => {
     try { await commandBus.send("feeding.stop"); }
